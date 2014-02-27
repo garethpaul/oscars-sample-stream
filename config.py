@@ -1,0 +1,5 @@
+consumer_key = ENV['consumer_key']
+consumer_secret = ENV['consumer_secret']
+access_key = ENV['access_key']
+access_secret = ENV['access_secret']
+mongo_url = ENV['MONGOHQ_URL']

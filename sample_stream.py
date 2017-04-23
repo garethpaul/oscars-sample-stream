@@ -36,4 +36,4 @@ class CustomStreamListener(tweepy.StreamListener):
 # create stream
 streaming_api = tweepy.streaming.Stream(auth, CustomStreamListener(api))
 # filter for the oscars
-straming_api.filter(track=['#oscars'])
+streaming_api.filter(track=['#oscars'])

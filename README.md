@@ -1,3 +1,8 @@
+# oscars-sample-stream
+
+<!-- README-OVERVIEW-IMAGE -->
+![Project overview](docs/readme-overview.svg)
+
 Sample application with HEROKU for streaming data to MongoHQ.
 
 ```html

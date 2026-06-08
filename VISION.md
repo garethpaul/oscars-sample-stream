@@ -26,6 +26,8 @@ Priority:
 - Document the expected stream filter and MongoDB collection behavior
 - Treat the current Python and API dependencies as legacy
 - Keep no-network tests available for stream startup and payload handling
+- Treat malformed, non-object, and incomplete stream payloads as ignorable
+  worker input
 
 Next priorities:
 

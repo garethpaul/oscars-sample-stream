@@ -7,6 +7,8 @@
 - Fixed the stream startup typo and moved execution behind a `start_stream()`
   entry point.
 - Added no-network tests with fake Tweepy and MongoDB clients.
+- Hardened stream payload handling for non-object payloads and non-object
+  `user` values.
 - Stored tweet timestamps as timezone-aware UTC values.
 - Added `make check` and static baseline verification.
 - Added ignore rules for local secrets, caches, logs, and temporary files.

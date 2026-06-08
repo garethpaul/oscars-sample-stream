@@ -106,6 +106,8 @@ class SampleStreamTest(unittest.TestCase):
         listener = sample_stream.CustomStreamListener(api=object(), mongo_client=client)
 
         self.assertTrue(listener.on_data("not-json"))
+        self.assertTrue(listener.on_data("[]"))
+        self.assertTrue(listener.on_data('{"text":"bad user","user":"academy"}'))
         self.assertTrue(listener.on_data('{"text":"missing user"}'))
         self.assertEqual([], client.TweetDB.tweets.documents)
 

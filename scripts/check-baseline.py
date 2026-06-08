@@ -59,6 +59,8 @@ def main():
         "streaming_api.filter",
         "if __name__ == \"__main__\"",
         "except ValueError",
+        "isinstance(data, dict)",
+        "isinstance(user, dict)",
         "datetime.timezone.utc",
     ]:
         if phrase not in stream:
@@ -67,7 +69,13 @@ def main():
         failures.append("sample_stream.py must not contain the stream startup typo")
 
     tests = read("test_sample_stream.py")
-    for phrase in ["FakeOAuthHandler", "FakeMongoClient", "test_start_stream_filters_for_oscars"]:
+    for phrase in [
+        "FakeOAuthHandler",
+        "FakeMongoClient",
+        "test_start_stream_filters_for_oscars",
+        "bad user",
+        "[]",
+    ]:
         if phrase not in tests:
             failures.append(f"test_sample_stream.py must include {phrase}")
 

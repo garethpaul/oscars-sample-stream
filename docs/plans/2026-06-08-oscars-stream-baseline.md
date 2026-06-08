@@ -14,7 +14,8 @@ for `#oscars` posts and write selected fields to MongoDB.
 - `sample_stream.py` called `straming_api.filter`, preventing the worker from
   starting the stream.
 - Stream startup happened at import time, which made no-network testing hard.
-- Malformed or non-tweet stream payloads could raise instead of being ignored.
+- Malformed, non-object, or non-tweet stream payloads could raise instead of
+  being ignored.
 - There was no local verification command or mock-stream test path.
 
 ## Work Completed
@@ -24,6 +25,8 @@ for `#oscars` posts and write selected fields to MongoDB.
 - Fixed stream startup and moved worker execution behind `start_stream()` and a
   `__main__` guard.
 - Added injectable fake Twitter and MongoDB clients for no-network tests.
+- Ignored decoded non-object payloads and non-object `user` values instead of
+  raising.
 - Stored stream timestamps as timezone-aware UTC values.
 - Ignored local secrets, caches, logs, and temporary files.
 - Added `make check`, `test_sample_stream.py`, and static baseline checks.

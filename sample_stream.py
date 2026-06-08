@@ -28,8 +28,12 @@ class CustomStreamListener(tweepy.StreamListener):
             data = json.loads(tweet)
         except ValueError:
             return True
+        if not isinstance(data, dict):
+            return True
 
         user = data.get("user") or {}
+        if not isinstance(user, dict):
+            return True
         text = data.get("text")
         screen_name = user.get("screen_name")
         if not text or not screen_name:

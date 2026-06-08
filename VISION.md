@@ -13,6 +13,10 @@ Python worker.
 The goal is to preserve the learning value while making the legacy API,
 dependency, and deployment assumptions obvious.
 
+Current baseline: `make check` runs no-network tests with fake Tweepy and
+MongoDB clients and verifies the `#oscars` stream filter, environment-variable
+configuration, and static docs.
+
 The current focus is:
 
 Priority:
@@ -21,10 +25,10 @@ Priority:
 - Keep credentials outside source files
 - Document the expected stream filter and MongoDB collection behavior
 - Treat the current Python and API dependencies as legacy
+- Keep no-network tests available for stream startup and payload handling
 
 Next priorities:
 
-- Fix the stream startup typo in a behavior-focused patch
 - Add a dry-run or mock-stream path for local testing
 - Move configuration examples into environment-variable documentation
 - Update dependencies only after documenting API compatibility changes

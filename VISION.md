@@ -39,7 +39,7 @@ Streaming social data can collect personal information. The sample should make
 collection scope, retention, and credentials explicit, and should never include
 real captured payloads in the repository.
 
-## What We Will Not Merge For Now
+## What We Will Not Merge (For Now)
 
 - Checked-in API credentials or MongoDB URLs
 - Broad data collection defaults

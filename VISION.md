@@ -45,3 +45,6 @@ real captured payloads in the repository.
 - Broad data collection defaults
 - Silent storage of full payloads without documentation
 - Dependency upgrades that hide streaming API behavior changes
+
+This list is a roadmap guardrail, not a permanent rule.
+Strong user demand and strong technical rationale can change it.

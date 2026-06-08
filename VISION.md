@@ -1,5 +1,8 @@
 ## Oscars Sample Stream Vision
 
+This document explains the current state and direction of the project.
+Project overview and developer docs: [`README.md`](README.md)
+
 Oscars Sample Stream is a legacy Heroku sample that streams matching social
 posts into MongoDB for a small event-focused demo.
 

@@ -35,6 +35,11 @@ Contribution rules:
 
 ## Security And Responsible Use
 
+Canonical security policy and reporting:
+
+- [`SECURITY.md`](SECURITY.md)
+
+
 Streaming social data can collect personal information. The sample should make
 collection scope, retention, and credentials explicit, and should never include
 real captured payloads in the repository.

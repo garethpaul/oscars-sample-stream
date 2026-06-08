@@ -1,5 +1,8 @@
 # oscars-sample-stream
 
+<!-- README-OVERVIEW-IMAGE -->
+![Project overview](docs/readme-overview.svg)
+
 ## Overview
 
 `garethpaul/oscars-sample-stream` is a Python project. Sample Streaming API for #oscars
@@ -71,4 +74,3 @@ Keep changes small and tied to the project that is already present in this repos
 Prior README summary:
 
 > oscars-sample-stream <!-- README-OVERVIEW-IMAGE --> Sample application with HEROKU for streaming data to MongoHQ.
-

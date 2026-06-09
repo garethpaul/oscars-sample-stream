@@ -72,7 +72,8 @@ def main():
         "value.strip()",
         "datetime.timezone.utc",
         "track_terms must include at least one non-empty string",
-        "isinstance(track_terms, dict)",
+        "from collections.abc import Mapping",
+        "isinstance(track_terms, Mapping)",
         "except TypeError",
         "except (TypeError, ValueError)",
     ]:
@@ -97,6 +98,7 @@ def main():
         "test_start_stream_rejects_empty_custom_track_terms",
         "test_start_stream_rejects_non_iterable_custom_track_terms",
         "test_start_stream_rejects_mapping_custom_track_terms",
+        "UserDict",
     ]:
         if phrase not in tests:
             failures.append(f"test_sample_stream.py must include {phrase}")

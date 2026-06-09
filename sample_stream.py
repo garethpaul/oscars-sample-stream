@@ -1,5 +1,6 @@
 import datetime
 import json
+from collections.abc import Mapping
 
 import pymongo
 import tweepy
@@ -22,7 +23,7 @@ def clean_track_terms(track_terms):
         return list(TRACK_TERMS)
     if isinstance(track_terms, str):
         track_terms = [track_terms]
-    elif isinstance(track_terms, dict):
+    elif isinstance(track_terms, Mapping):
         track_terms = []
     else:
         try:

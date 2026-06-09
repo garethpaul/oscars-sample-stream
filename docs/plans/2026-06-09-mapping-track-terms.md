@@ -11,8 +11,8 @@ collection scope without an explicit list of filters.
 
 ## Objectives
 
-- Reject mapping custom stream filters through the same validation error used
-  for empty filter sets.
+- Reject dictionary-like mapping custom stream filters through the same
+  validation error used for empty filter sets.
 - Preserve string, list, and tuple filter normalization behavior.
 - Add no-network coverage for mapping custom stream filters.
 - Extend static checks and docs so filter scope stays explicit.

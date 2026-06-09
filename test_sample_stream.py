@@ -3,6 +3,7 @@ import os
 import sys
 import types
 import unittest
+from collections import UserDict
 
 
 class FakeOAuthHandler:
@@ -134,6 +135,8 @@ class SampleStreamTest(unittest.TestCase):
 
         with self.assertRaises(ValueError):
             sample_stream.start_stream({"track": "#oscars"})
+        with self.assertRaises(ValueError):
+            sample_stream.start_stream(UserDict({"track": "#oscars"}))
 
     def test_config_ignores_blank_env_values_and_uses_fallback(self):
         sample_stream = load_sample_stream(

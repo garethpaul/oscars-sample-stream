@@ -22,6 +22,11 @@ def clean_track_terms(track_terms):
         return list(TRACK_TERMS)
     if isinstance(track_terms, str):
         track_terms = [track_terms]
+    else:
+        try:
+            iter(track_terms)
+        except TypeError:
+            track_terms = [track_terms]
     cleaned = []
     for term in track_terms:
         clean_term = clean_required_text(term)

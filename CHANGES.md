@@ -15,6 +15,7 @@
   before falling back to alternate variable names.
 - Normalized custom stream filters and rejected empty filter sets instead of
   silently falling back to `#oscars`.
+- Routed non-iterable custom stream filters through the same validation error.
 - Stored tweet timestamps as timezone-aware UTC values.
 - Added `make check` and static baseline verification.
 - Added ignore rules for local secrets, caches, logs, and temporary files.

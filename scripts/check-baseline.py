@@ -23,6 +23,7 @@ REQUIRED = [
     "docs/plans/2026-06-09-stream-field-normalization.md",
     "docs/plans/2026-06-09-env-value-normalization.md",
     "docs/plans/2026-06-09-track-term-normalization.md",
+    "docs/plans/2026-06-09-non-iterable-track-terms.md",
     "requirements.txt",
     "sample_stream.py",
     "scripts/check-baseline.py",
@@ -70,6 +71,7 @@ def main():
         "value.strip()",
         "datetime.timezone.utc",
         "track_terms must include at least one non-empty string",
+        "except TypeError",
     ]:
         if phrase not in stream:
             failures.append(f"sample_stream.py must include {phrase}")
@@ -89,6 +91,7 @@ def main():
         "test_start_stream_accepts_single_custom_track_term",
         "test_start_stream_trims_custom_track_terms",
         "test_start_stream_rejects_empty_custom_track_terms",
+        "test_start_stream_rejects_non_iterable_custom_track_terms",
     ]:
         if phrase not in tests:
             failures.append(f"test_sample_stream.py must include {phrase}")
@@ -113,6 +116,7 @@ def main():
         "required stream fields",
         "blank environment values",
         "custom stream filters",
+        "non-iterable custom stream filters",
     ]:
         if phrase.lower() not in docs.lower():
             failures.append(f"docs must mention {phrase}")
@@ -129,6 +133,9 @@ def main():
     track_plan = read("docs/plans/2026-06-09-track-term-normalization.md")
     if "status: completed" not in track_plan or "clean_track_terms" not in track_plan:
         failures.append("track term normalization plan must record completed status and verification")
+    non_iterable_plan = read("docs/plans/2026-06-09-non-iterable-track-terms.md")
+    if "status: completed" not in non_iterable_plan or "non-iterable" not in non_iterable_plan:
+        failures.append("non-iterable track terms plan must record completed status and verification")
 
     try:
         ET.parse(ROOT / "docs/readme-overview.svg")

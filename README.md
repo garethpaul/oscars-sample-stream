@@ -60,6 +60,8 @@ The setup commands above are derived from repository files. Legacy mobile, Pytho
 - Custom stream filters must contain at least one non-empty string after
   trimming; blank custom stream filters are rejected instead of silently using
   the default.
+- Non-iterable custom stream filters are rejected with the same validation path
+  instead of raising a raw type error.
 - Required stream fields are normalized before storage: `text` and
   `screen_name` must be non-empty strings after trimming whitespace.
 
@@ -89,6 +91,8 @@ When the required SDK or runtime is unavailable, use static checks and source re
   settings.
 - Custom stream filters are normalized before starting Tweepy so collection
   scope stays explicit.
+- Non-iterable custom stream filters should fail validation before stream
+  startup.
 
 ## Maintenance Notes
 

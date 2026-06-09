@@ -31,6 +31,7 @@ Priority:
 - Normalize required stream fields before MongoDB writes
 - Keep blank environment values from satisfying required configuration
 - Keep custom stream filters explicit and reject empty filter sets
+- Keep non-iterable custom stream filters on the validation path
 
 Next priorities:
 

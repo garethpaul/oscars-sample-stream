@@ -123,6 +123,12 @@ class SampleStreamTest(unittest.TestCase):
         with self.assertRaises(ValueError):
             sample_stream.start_stream([" ", 123, None])
 
+    def test_start_stream_rejects_non_iterable_custom_track_terms(self):
+        sample_stream = load_sample_stream()
+
+        with self.assertRaises(ValueError):
+            sample_stream.start_stream(123)
+
     def test_config_ignores_blank_env_values_and_uses_fallback(self):
         sample_stream = load_sample_stream(
             {

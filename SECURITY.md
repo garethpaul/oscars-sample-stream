@@ -45,6 +45,8 @@ Blank environment values should be ignored rather than treated as configured
 credentials or MongoDB URLs.
 Custom stream filters should include at least one non-empty string after
 trimming so collection scope stays explicit.
+Non-iterable custom stream filters should fail validation before stream
+startup.
 
 ## Dependency and Supply Chain Security
 

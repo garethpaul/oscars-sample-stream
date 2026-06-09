@@ -57,6 +57,9 @@ The setup commands above are derived from repository files. Legacy mobile, Pytho
 - Blank environment values are ignored so fallback variable names can be used.
 - Run `python sample_stream.py` or the Heroku `worker` process from `Procfile`.
 - The default stream filter is `#oscars`.
+- Custom stream filters must contain at least one non-empty string after
+  trimming; blank custom stream filters are rejected instead of silently using
+  the default.
 - Required stream fields are normalized before storage: `text` and
   `screen_name` must be non-empty strings after trimming whitespace.
 
@@ -84,6 +87,8 @@ When the required SDK or runtime is unavailable, use static checks and source re
   being written to MongoDB.
 - Blank environment values should not satisfy required credential or Mongo URL
   settings.
+- Custom stream filters are normalized before starting Tweepy so collection
+  scope stays explicit.
 
 ## Maintenance Notes
 

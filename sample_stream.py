@@ -17,6 +17,21 @@ def clean_required_text(value):
     return value or None
 
 
+def clean_track_terms(track_terms):
+    if track_terms is None:
+        return list(TRACK_TERMS)
+    if isinstance(track_terms, str):
+        track_terms = [track_terms]
+    cleaned = []
+    for term in track_terms:
+        clean_term = clean_required_text(term)
+        if clean_term:
+            cleaned.append(clean_term)
+    if not cleaned:
+        raise ValueError("track_terms must include at least one non-empty string")
+    return cleaned
+
+
 def create_api():
     auth = tweepy.OAuthHandler(config.consumer_key, config.consumer_secret)
     auth.set_access_token(config.access_key, config.access_secret)
@@ -67,7 +82,7 @@ def create_stream(api):
 def start_stream(track_terms=None):
     api = create_api()
     streaming_api = create_stream(api)
-    streaming_api.filter(track=track_terms or TRACK_TERMS)
+    streaming_api.filter(track=clean_track_terms(track_terms))
     return streaming_api
 
 

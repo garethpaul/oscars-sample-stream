@@ -43,6 +43,8 @@ Required stream fields should be strings with meaningful content after
 whitespace trimming before they are written to MongoDB.
 Blank environment values should be ignored rather than treated as configured
 credentials or MongoDB URLs.
+Custom stream filters should include at least one non-empty string after
+trimming so collection scope stays explicit.
 
 ## Dependency and Supply Chain Security
 

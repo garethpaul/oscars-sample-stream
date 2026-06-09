@@ -30,6 +30,7 @@ Priority:
   worker input
 - Normalize required stream fields before MongoDB writes
 - Keep blank environment values from satisfying required configuration
+- Keep custom stream filters explicit and reject empty filter sets
 
 Next priorities:
 

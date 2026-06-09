@@ -103,6 +103,26 @@ class SampleStreamTest(unittest.TestCase):
 
         self.assertEqual(["#oscars"], stream.filtered_track)
 
+    def test_start_stream_trims_custom_track_terms(self):
+        sample_stream = load_sample_stream()
+
+        stream = sample_stream.start_stream([" #oscars2026 ", "", "best picture"])
+
+        self.assertEqual(["#oscars2026", "best picture"], stream.filtered_track)
+
+    def test_start_stream_accepts_single_custom_track_term(self):
+        sample_stream = load_sample_stream()
+
+        stream = sample_stream.start_stream(" #oscars2026 ")
+
+        self.assertEqual(["#oscars2026"], stream.filtered_track)
+
+    def test_start_stream_rejects_empty_custom_track_terms(self):
+        sample_stream = load_sample_stream()
+
+        with self.assertRaises(ValueError):
+            sample_stream.start_stream([" ", 123, None])
+
     def test_config_ignores_blank_env_values_and_uses_fallback(self):
         sample_stream = load_sample_stream(
             {

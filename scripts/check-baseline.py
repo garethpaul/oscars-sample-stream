@@ -22,6 +22,7 @@ REQUIRED = [
     PLAN,
     "docs/plans/2026-06-09-stream-field-normalization.md",
     "docs/plans/2026-06-09-env-value-normalization.md",
+    "docs/plans/2026-06-09-track-term-normalization.md",
     "requirements.txt",
     "sample_stream.py",
     "scripts/check-baseline.py",
@@ -59,6 +60,8 @@ def main():
         "def create_stream",
         "def start_stream",
         "def clean_required_text",
+        "def clean_track_terms",
+        "isinstance(track_terms, str)",
         "streaming_api.filter",
         "if __name__ == \"__main__\"",
         "except ValueError",
@@ -66,6 +69,7 @@ def main():
         "isinstance(user, dict)",
         "value.strip()",
         "datetime.timezone.utc",
+        "track_terms must include at least one non-empty string",
     ]:
         if phrase not in stream:
             failures.append(f"sample_stream.py must include {phrase}")
@@ -82,6 +86,9 @@ def main():
         "bad name",
         "text\":123",
         "[]",
+        "test_start_stream_accepts_single_custom_track_term",
+        "test_start_stream_trims_custom_track_terms",
+        "test_start_stream_rejects_empty_custom_track_terms",
     ]:
         if phrase not in tests:
             failures.append(f"test_sample_stream.py must include {phrase}")
@@ -105,6 +112,7 @@ def main():
         "Twitter credentials",
         "required stream fields",
         "blank environment values",
+        "custom stream filters",
     ]:
         if phrase.lower() not in docs.lower():
             failures.append(f"docs must mention {phrase}")
@@ -118,6 +126,9 @@ def main():
     env_plan = read("docs/plans/2026-06-09-env-value-normalization.md")
     if "status: completed" not in env_plan or "required_env" not in env_plan:
         failures.append("env normalization plan must record completed status and verification")
+    track_plan = read("docs/plans/2026-06-09-track-term-normalization.md")
+    if "status: completed" not in track_plan or "clean_track_terms" not in track_plan:
+        failures.append("track term normalization plan must record completed status and verification")
 
     try:
         ET.parse(ROOT / "docs/readme-overview.svg")

@@ -16,6 +16,8 @@
 - Normalized custom stream filters and rejected empty filter sets instead of
   silently falling back to `#oscars`.
 - Routed non-iterable custom stream filters through the same validation error.
+- Ignored non-string raw stream payloads instead of letting JSON parsing type
+  errors stop the worker.
 - Stored tweet timestamps as timezone-aware UTC values.
 - Added `make check` and static baseline verification.
 - Added ignore rules for local secrets, caches, logs, and temporary files.

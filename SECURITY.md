@@ -47,6 +47,8 @@ Custom stream filters should include at least one non-empty string after
 trimming so collection scope stays explicit.
 Non-iterable custom stream filters should fail validation before stream
 startup.
+Non-string raw stream payloads should be ignored like malformed JSON rather
+than terminating the worker.
 
 ## Dependency and Supply Chain Security
 

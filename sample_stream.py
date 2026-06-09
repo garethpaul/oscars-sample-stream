@@ -53,7 +53,7 @@ class CustomStreamListener(tweepy.StreamListener):
     def on_data(self, tweet):
         try:
             data = json.loads(tweet)
-        except ValueError:
+        except (TypeError, ValueError):
             return True
         if not isinstance(data, dict):
             return True

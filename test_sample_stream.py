@@ -162,6 +162,7 @@ class SampleStreamTest(unittest.TestCase):
         listener = sample_stream.CustomStreamListener(api=object(), mongo_client=client)
 
         self.assertTrue(listener.on_data("not-json"))
+        self.assertTrue(listener.on_data(None))
         self.assertTrue(listener.on_data("[]"))
         self.assertTrue(listener.on_data('{"text":"bad user","user":"academy"}'))
         self.assertTrue(listener.on_data('{"text":123,"user":{"screen_name":"academy"}}'))

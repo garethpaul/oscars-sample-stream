@@ -62,6 +62,8 @@ The setup commands above are derived from repository files. Legacy mobile, Pytho
   the default.
 - Non-iterable custom stream filters are rejected with the same validation path
   instead of raising a raw type error.
+- Non-string raw stream payloads are ignored like malformed JSON so the worker
+  keeps running on unexpected callbacks.
 - Required stream fields are normalized before storage: `text` and
   `screen_name` must be non-empty strings after trimming whitespace.
 
@@ -93,6 +95,7 @@ When the required SDK or runtime is unavailable, use static checks and source re
   scope stays explicit.
 - Non-iterable custom stream filters should fail validation before stream
   startup.
+- Non-string raw stream payloads should not terminate the streaming worker.
 
 ## Maintenance Notes
 

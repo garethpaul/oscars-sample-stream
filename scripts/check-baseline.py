@@ -24,6 +24,7 @@ REQUIRED = [
     "docs/plans/2026-06-09-env-value-normalization.md",
     "docs/plans/2026-06-09-track-term-normalization.md",
     "docs/plans/2026-06-09-non-iterable-track-terms.md",
+    "docs/plans/2026-06-09-raw-stream-payload-type.md",
     "requirements.txt",
     "sample_stream.py",
     "scripts/check-baseline.py",
@@ -65,13 +66,13 @@ def main():
         "isinstance(track_terms, str)",
         "streaming_api.filter",
         "if __name__ == \"__main__\"",
-        "except ValueError",
         "isinstance(data, dict)",
         "isinstance(user, dict)",
         "value.strip()",
         "datetime.timezone.utc",
         "track_terms must include at least one non-empty string",
         "except TypeError",
+        "except (TypeError, ValueError)",
     ]:
         if phrase not in stream:
             failures.append(f"sample_stream.py must include {phrase}")
@@ -87,6 +88,7 @@ def main():
         "bad user",
         "bad name",
         "text\":123",
+        "listener.on_data(None)",
         "[]",
         "test_start_stream_accepts_single_custom_track_term",
         "test_start_stream_trims_custom_track_terms",
@@ -117,6 +119,7 @@ def main():
         "blank environment values",
         "custom stream filters",
         "non-iterable custom stream filters",
+        "non-string raw stream payloads",
     ]:
         if phrase.lower() not in docs.lower():
             failures.append(f"docs must mention {phrase}")
@@ -136,6 +139,9 @@ def main():
     non_iterable_plan = read("docs/plans/2026-06-09-non-iterable-track-terms.md")
     if "status: completed" not in non_iterable_plan or "non-iterable" not in non_iterable_plan:
         failures.append("non-iterable track terms plan must record completed status and verification")
+    raw_payload_plan = read("docs/plans/2026-06-09-raw-stream-payload-type.md")
+    if "status: completed" not in raw_payload_plan or "TypeError" not in raw_payload_plan:
+        failures.append("raw stream payload type plan must record completed status and verification")
 
     try:
         ET.parse(ROOT / "docs/readme-overview.svg")

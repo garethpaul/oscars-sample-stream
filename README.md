@@ -68,6 +68,8 @@ The setup commands above are derived from repository files. Legacy mobile, Pytho
   keeps running on unexpected callbacks.
 - Required stream fields are normalized before storage: `text` and
   `screen_name` must be non-empty strings after trimming whitespace.
+- Local verification runs with Python bytecode writes disabled so no
+  `__pycache__` output remains after the no-network gates.
 
 ## Testing and Verification
 
@@ -92,6 +94,8 @@ When the required SDK or runtime is unavailable, use static checks and source re
 - Review changes touching file, media, JSON, XML, CSV, OCR, or data parsing; examples from the scan include sample_stream.py.
 - The test suite uses no-network tests with fake Tweepy and MongoDB clients so
   stream behavior can be verified without live credentials.
+- Python bytecode is local tooling output and should not remain after
+  `make check`.
 - Non-string or whitespace-only required stream fields are ignored instead of
   being written to MongoDB.
 - Blank environment values should not satisfy required credential or Mongo URL

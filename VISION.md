@@ -36,6 +36,7 @@ Priority:
 - Keep non-iterable custom stream filters on the validation path
 - Keep mapping custom stream filters on the validation path
 - Keep non-string raw stream payloads non-fatal
+- Keep verification targets from leaving Python bytecode behind
 
 Next priorities:
 
@@ -50,6 +51,7 @@ Contribution rules:
 - Do not commit real access tokens, connection strings, or captured user data.
 - Include a local test path for worker changes.
 - Keep event-specific filters easy to change.
+- Preserve bytecode-free verification when changing Makefile gates.
 
 ## Security And Responsible Use
 

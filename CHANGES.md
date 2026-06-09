@@ -4,6 +4,8 @@
 
 - Added stable `make lint`, `make build`, and `make verify` aliases around the
   existing no-network static and full verification gates.
+- Made no-network verification bytecode-free and added a guard against leftover
+  Python bytecode.
 
 ## 2026-06-08
 

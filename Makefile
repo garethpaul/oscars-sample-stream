@@ -1,5 +1,7 @@
 .PHONY: build check lint static-check test verify
 
+PYTHON ?= python3
+
 check: test lint
 
 verify: check
@@ -9,7 +11,7 @@ build: static-check
 lint: static-check
 
 test:
-	python3 -m unittest discover -v
+	PYTHONDONTWRITEBYTECODE=1 $(PYTHON) -m unittest discover -v
 
 static-check:
-	python3 scripts/check-baseline.py
+	PYTHONDONTWRITEBYTECODE=1 $(PYTHON) scripts/check-baseline.py

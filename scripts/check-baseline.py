@@ -27,6 +27,7 @@ REQUIRED = [
     "docs/plans/2026-06-09-raw-stream-payload-type.md",
     "docs/plans/2026-06-09-mapping-track-terms.md",
     "docs/plans/2026-06-09-make-gate-aliases.md",
+    "docs/plans/2026-06-09-bytecode-free-verification.md",
     "requirements.txt",
     "sample_stream.py",
     "scripts/check-baseline.py",
@@ -106,8 +107,9 @@ def main():
 
     makefile = read("Makefile")
     for phrase in [
-        "python3 -m unittest discover -v",
-        "python3 scripts/check-baseline.py",
+        "PYTHON ?= python3",
+        "PYTHONDONTWRITEBYTECODE=1 $(PYTHON) -m unittest discover -v",
+        "PYTHONDONTWRITEBYTECODE=1 $(PYTHON) scripts/check-baseline.py",
         "lint: static-check",
         "build: static-check",
         "verify: check",
@@ -119,6 +121,13 @@ def main():
     for phrase in [".env", ".env.*", "__pycache__/", "*.log", "tmp/"]:
         if phrase not in gitignore:
             failures.append(f".gitignore must include {phrase}")
+    bytecode_paths = sorted(
+        str(path.relative_to(ROOT))
+        for pattern in ("__pycache__", "*.pyc")
+        for path in ROOT.rglob(pattern)
+    )
+    if bytecode_paths:
+        failures.append("generated Python bytecode must not remain after gates: " + ", ".join(bytecode_paths[:5]))
 
     docs = "\n".join(read(path) for path in ["README.md", "SECURITY.md", "VISION.md"])
     for phrase in [
@@ -136,6 +145,7 @@ def main():
         "make lint",
         "make build",
         "make verify",
+        "Python bytecode",
     ]:
         if phrase.lower() not in docs.lower():
             failures.append(f"docs must mention {phrase}")
@@ -165,6 +175,9 @@ def main():
     for phrase in ["status: completed", "make lint", "make build", "make verify"]:
         if phrase not in aliases_plan:
             failures.append(f"make gate aliases plan must record {phrase}")
+    bytecode_plan = read("docs/plans/2026-06-09-bytecode-free-verification.md")
+    if "status: completed" not in bytecode_plan or "Python bytecode" not in bytecode_plan:
+        failures.append("bytecode-free verification plan must record completed status and verification")
 
     try:
         ET.parse(ROOT / "docs/readme-overview.svg")

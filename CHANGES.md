@@ -16,6 +16,7 @@
 - Normalized custom stream filters and rejected empty filter sets instead of
   silently falling back to `#oscars`.
 - Routed non-iterable custom stream filters through the same validation error.
+- Rejected mapping custom stream filters instead of deriving terms from keys.
 - Ignored non-string raw stream payloads instead of letting JSON parsing type
   errors stop the worker.
 - Stored tweet timestamps as timezone-aware UTC values.

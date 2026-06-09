@@ -22,6 +22,8 @@ def clean_track_terms(track_terms):
         return list(TRACK_TERMS)
     if isinstance(track_terms, str):
         track_terms = [track_terms]
+    elif isinstance(track_terms, dict):
+        track_terms = []
     else:
         try:
             iter(track_terms)

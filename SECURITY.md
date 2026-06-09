@@ -47,6 +47,8 @@ Custom stream filters should include at least one non-empty string after
 trimming so collection scope stays explicit.
 Non-iterable custom stream filters should fail validation before stream
 startup.
+Mapping custom stream filters should fail validation rather than deriving
+collection scope from dictionary keys.
 Non-string raw stream payloads should be ignored like malformed JSON rather
 than terminating the worker.
 

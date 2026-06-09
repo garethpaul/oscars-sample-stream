@@ -25,6 +25,7 @@ REQUIRED = [
     "docs/plans/2026-06-09-track-term-normalization.md",
     "docs/plans/2026-06-09-non-iterable-track-terms.md",
     "docs/plans/2026-06-09-raw-stream-payload-type.md",
+    "docs/plans/2026-06-09-mapping-track-terms.md",
     "requirements.txt",
     "sample_stream.py",
     "scripts/check-baseline.py",
@@ -71,6 +72,7 @@ def main():
         "value.strip()",
         "datetime.timezone.utc",
         "track_terms must include at least one non-empty string",
+        "isinstance(track_terms, dict)",
         "except TypeError",
         "except (TypeError, ValueError)",
     ]:
@@ -94,6 +96,7 @@ def main():
         "test_start_stream_trims_custom_track_terms",
         "test_start_stream_rejects_empty_custom_track_terms",
         "test_start_stream_rejects_non_iterable_custom_track_terms",
+        "test_start_stream_rejects_mapping_custom_track_terms",
     ]:
         if phrase not in tests:
             failures.append(f"test_sample_stream.py must include {phrase}")
@@ -119,6 +122,7 @@ def main():
         "blank environment values",
         "custom stream filters",
         "non-iterable custom stream filters",
+        "mapping custom stream filters",
         "non-string raw stream payloads",
     ]:
         if phrase.lower() not in docs.lower():
@@ -142,6 +146,9 @@ def main():
     raw_payload_plan = read("docs/plans/2026-06-09-raw-stream-payload-type.md")
     if "status: completed" not in raw_payload_plan or "TypeError" not in raw_payload_plan:
         failures.append("raw stream payload type plan must record completed status and verification")
+    mapping_plan = read("docs/plans/2026-06-09-mapping-track-terms.md")
+    if "status: completed" not in mapping_plan or "mapping custom stream filters" not in mapping_plan:
+        failures.append("mapping track terms plan must record completed status and verification")
 
     try:
         ET.parse(ROOT / "docs/readme-overview.svg")

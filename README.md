@@ -62,6 +62,8 @@ The setup commands above are derived from repository files. Legacy mobile, Pytho
   the default.
 - Non-iterable custom stream filters are rejected with the same validation path
   instead of raising a raw type error.
+- Mapping custom stream filters are rejected instead of treating mapping keys as
+  implicit track terms.
 - Non-string raw stream payloads are ignored like malformed JSON so the worker
   keeps running on unexpected callbacks.
 - Required stream fields are normalized before storage: `text` and
@@ -95,6 +97,8 @@ When the required SDK or runtime is unavailable, use static checks and source re
   scope stays explicit.
 - Non-iterable custom stream filters should fail validation before stream
   startup.
+- Mapping custom stream filters should fail validation instead of deriving track
+  terms from dictionary keys.
 - Non-string raw stream payloads should not terminate the streaming worker.
 
 ## Maintenance Notes

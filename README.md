@@ -72,6 +72,9 @@ The setup commands above are derived from repository files. Legacy mobile, Pytho
 ## Testing and Verification
 
 - `make check`
+- `make lint`
+- `make build`
+- `make verify`
 - `python3 -m unittest discover -v`
 - `python3 scripts/check-baseline.py`
 
@@ -103,8 +106,9 @@ When the required SDK or runtime is unavailable, use static checks and source re
 
 ## Maintenance Notes
 
-- Run `make check` before changing stream startup, credential handling, MongoDB
-  writes, or the `#oscars` filter.
+- Run `make check`, `make lint`, `make build`, and `make verify` before
+  changing stream startup, credential handling, MongoDB writes, or the
+  `#oscars` filter.
 - See `CHANGES.md` and `docs/plans/2026-06-08-oscars-stream-baseline.md` for
   the current worker baseline.
 - See `SECURITY.md` for vulnerability reporting and safe research guidance.

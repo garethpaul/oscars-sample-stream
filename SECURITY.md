@@ -39,6 +39,8 @@ For web services, APIs, sockets, or scraping workflows, prioritize reports invol
 For this worker, also review stream filters, retained fields, MongoDB writes,
 and error handling around malformed payloads. Run `make check` before changing
 credential handling or stream startup.
+Use `make lint`, `make build`, and `make verify` as the stable local aliases
+for static verification and the full no-network gate.
 Required stream fields should be strings with meaningful content after
 whitespace trimming before they are written to MongoDB.
 Blank environment values should be ignored rather than treated as configured

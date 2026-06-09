@@ -15,7 +15,9 @@ dependency, and deployment assumptions obvious.
 
 Current baseline: `make check` runs no-network tests with fake Tweepy and
 MongoDB clients and verifies the `#oscars` stream filter, environment-variable
-configuration, and static docs.
+configuration, and static docs. `make lint`, `make build`, and `make verify`
+are stable aliases for static verification, build-through-static-check, and
+full verification.
 
 The current focus is:
 

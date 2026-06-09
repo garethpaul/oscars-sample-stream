@@ -26,6 +26,7 @@ REQUIRED = [
     "docs/plans/2026-06-09-non-iterable-track-terms.md",
     "docs/plans/2026-06-09-raw-stream-payload-type.md",
     "docs/plans/2026-06-09-mapping-track-terms.md",
+    "docs/plans/2026-06-09-make-gate-aliases.md",
     "requirements.txt",
     "sample_stream.py",
     "scripts/check-baseline.py",
@@ -104,7 +105,13 @@ def main():
             failures.append(f"test_sample_stream.py must include {phrase}")
 
     makefile = read("Makefile")
-    for phrase in ["python3 -m unittest discover -v", "python3 scripts/check-baseline.py"]:
+    for phrase in [
+        "python3 -m unittest discover -v",
+        "python3 scripts/check-baseline.py",
+        "lint: static-check",
+        "build: static-check",
+        "verify: check",
+    ]:
         if phrase not in makefile:
             failures.append(f"Makefile must include {phrase}")
 
@@ -126,6 +133,9 @@ def main():
         "non-iterable custom stream filters",
         "mapping custom stream filters",
         "non-string raw stream payloads",
+        "make lint",
+        "make build",
+        "make verify",
     ]:
         if phrase.lower() not in docs.lower():
             failures.append(f"docs must mention {phrase}")
@@ -151,6 +161,10 @@ def main():
     mapping_plan = read("docs/plans/2026-06-09-mapping-track-terms.md")
     if "status: completed" not in mapping_plan or "mapping custom stream filters" not in mapping_plan:
         failures.append("mapping track terms plan must record completed status and verification")
+    aliases_plan = read("docs/plans/2026-06-09-make-gate-aliases.md")
+    for phrase in ["status: completed", "make lint", "make build", "make verify"]:
+        if phrase not in aliases_plan:
+            failures.append(f"make gate aliases plan must record {phrase}")
 
     try:
         ET.parse(ROOT / "docs/readme-overview.svg")

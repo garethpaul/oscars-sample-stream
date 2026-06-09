@@ -1,5 +1,10 @@
 # Changes
 
+## 2026-06-09
+
+- Added stable `make lint`, `make build`, and `make verify` aliases around the
+  existing no-network static and full verification gates.
+
 ## 2026-06-08
 
 - Fixed environment configuration by replacing the undefined `ENV` lookup with

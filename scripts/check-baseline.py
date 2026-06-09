@@ -21,6 +21,7 @@ REQUIRED = [
     "docs/readme-overview.svg",
     PLAN,
     "docs/plans/2026-06-09-stream-field-normalization.md",
+    "docs/plans/2026-06-09-env-value-normalization.md",
     "requirements.txt",
     "sample_stream.py",
     "scripts/check-baseline.py",
@@ -47,7 +48,7 @@ def main():
     config = read("config.py")
     if "ENV[" in config:
         failures.append("config.py must use os.environ instead of undefined ENV")
-    for phrase in ["required_env", "consumer_key", "CONSUMER_KEY", "MONGOHQ_URL", "MONGO_URL"]:
+    for phrase in ["required_env", "consumer_key", "CONSUMER_KEY", "MONGOHQ_URL", "MONGO_URL", "value.strip()"]:
         if phrase not in config:
             failures.append(f"config.py must include {phrase}")
 
@@ -75,6 +76,7 @@ def main():
     for phrase in [
         "FakeOAuthHandler",
         "FakeMongoClient",
+        "test_config_ignores_blank_env_values_and_uses_fallback",
         "test_start_stream_filters_for_oscars",
         "bad user",
         "bad name",
@@ -95,7 +97,15 @@ def main():
             failures.append(f".gitignore must include {phrase}")
 
     docs = "\n".join(read(path) for path in ["README.md", "SECURITY.md", "VISION.md"])
-    for phrase in ["make check", "MONGOHQ_URL", "#oscars", "no-network tests", "Twitter credentials", "required stream fields"]:
+    for phrase in [
+        "make check",
+        "MONGOHQ_URL",
+        "#oscars",
+        "no-network tests",
+        "Twitter credentials",
+        "required stream fields",
+        "blank environment values",
+    ]:
         if phrase.lower() not in docs.lower():
             failures.append(f"docs must mention {phrase}")
 
@@ -105,6 +115,9 @@ def main():
     field_plan = read("docs/plans/2026-06-09-stream-field-normalization.md")
     if "status: completed" not in field_plan or "clean_required_text" not in field_plan:
         failures.append("field normalization plan must record completed status and verification")
+    env_plan = read("docs/plans/2026-06-09-env-value-normalization.md")
+    if "status: completed" not in env_plan or "required_env" not in env_plan:
+        failures.append("env normalization plan must record completed status and verification")
 
     try:
         ET.parse(ROOT / "docs/readme-overview.svg")

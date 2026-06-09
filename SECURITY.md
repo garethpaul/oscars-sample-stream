@@ -41,6 +41,8 @@ and error handling around malformed payloads. Run `make check` before changing
 credential handling or stream startup.
 Required stream fields should be strings with meaningful content after
 whitespace trimming before they are written to MongoDB.
+Blank environment values should be ignored rather than treated as configured
+credentials or MongoDB URLs.
 
 ## Dependency and Supply Chain Security
 

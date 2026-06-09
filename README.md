@@ -54,6 +54,7 @@ The setup commands above are derived from repository files. Legacy mobile, Pytho
   `access_key`, and `access_secret` environment variables, or uppercase
   equivalents.
 - Configure MongoDB with `MONGOHQ_URL` or `MONGO_URL`.
+- Blank environment values are ignored so fallback variable names can be used.
 - Run `python sample_stream.py` or the Heroku `worker` process from `Procfile`.
 - The default stream filter is `#oscars`.
 - Required stream fields are normalized before storage: `text` and
@@ -81,6 +82,8 @@ When the required SDK or runtime is unavailable, use static checks and source re
   stream behavior can be verified without live credentials.
 - Non-string or whitespace-only required stream fields are ignored instead of
   being written to MongoDB.
+- Blank environment values should not satisfy required credential or Mongo URL
+  settings.
 
 ## Maintenance Notes
 

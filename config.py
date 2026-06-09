@@ -5,6 +5,8 @@ def required_env(*names):
     for name in names:
         value = os.environ.get(name)
         if value:
+            value = value.strip()
+        if value:
             return value
     raise RuntimeError("Missing required environment variable: " + " or ".join(names))
 

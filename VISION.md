@@ -29,6 +29,7 @@ Priority:
 - Treat malformed, non-object, and incomplete stream payloads as ignorable
   worker input
 - Normalize required stream fields before MongoDB writes
+- Keep blank environment values from satisfying required configuration
 
 Next priorities:
 

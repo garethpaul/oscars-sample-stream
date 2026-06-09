@@ -50,14 +50,34 @@ class FakeMongoClient:
         self.TweetDB = types.SimpleNamespace(tweets=FakeTweets())
 
 
-def load_sample_stream():
-    for key, value in {
+ENV_NAMES = [
+    "consumer_key",
+    "consumer_secret",
+    "access_key",
+    "access_secret",
+    "MONGOHQ_URL",
+    "CONSUMER_KEY",
+    "CONSUMER_SECRET",
+    "ACCESS_KEY",
+    "ACCESS_SECRET",
+    "MONGO_URL",
+]
+
+
+def load_sample_stream(overrides=None):
+    values = {
         "consumer_key": "consumer",
         "consumer_secret": "consumer-secret",
         "access_key": "access",
         "access_secret": "access-secret",
         "MONGOHQ_URL": "mongodb://example.invalid/db",
-    }.items():
+    }
+    if overrides:
+        values.update(overrides)
+
+    for key in ENV_NAMES:
+        os.environ.pop(key, None)
+    for key, value in values.items():
         os.environ[key] = value
 
     fake_tweepy = types.SimpleNamespace(
@@ -82,6 +102,16 @@ class SampleStreamTest(unittest.TestCase):
         stream = sample_stream.start_stream()
 
         self.assertEqual(["#oscars"], stream.filtered_track)
+
+    def test_config_ignores_blank_env_values_and_uses_fallback(self):
+        sample_stream = load_sample_stream(
+            {
+                "consumer_key": "   ",
+                "CONSUMER_KEY": "consumer-fallback",
+            }
+        )
+
+        self.assertEqual("consumer-fallback", sample_stream.config.consumer_key)
 
     def test_listener_inserts_minimal_tweet_document(self):
         sample_stream = load_sample_stream()

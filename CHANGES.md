@@ -9,6 +9,8 @@
 - Added no-network tests with fake Tweepy and MongoDB clients.
 - Hardened stream payload handling for non-object payloads and non-object
   `user` values.
+- Normalized required stream fields and ignored non-string or whitespace-only
+  tweet text and screen names before MongoDB writes.
 - Stored tweet timestamps as timezone-aware UTC values.
 - Added `make check` and static baseline verification.
 - Added ignore rules for local secrets, caches, logs, and temporary files.

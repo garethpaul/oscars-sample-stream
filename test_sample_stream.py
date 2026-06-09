@@ -89,7 +89,7 @@ class SampleStreamTest(unittest.TestCase):
         listener = sample_stream.CustomStreamListener(api=object(), mongo_client=client)
 
         keep_streaming = listener.on_data(
-            '{"text":"hello oscars","user":{"screen_name":"academy"}}'
+            '{"text":"  hello oscars  ","user":{"screen_name":" academy "}}'
         )
 
         self.assertTrue(keep_streaming)
@@ -108,6 +108,9 @@ class SampleStreamTest(unittest.TestCase):
         self.assertTrue(listener.on_data("not-json"))
         self.assertTrue(listener.on_data("[]"))
         self.assertTrue(listener.on_data('{"text":"bad user","user":"academy"}'))
+        self.assertTrue(listener.on_data('{"text":123,"user":{"screen_name":"academy"}}'))
+        self.assertTrue(listener.on_data('{"text":"bad name","user":{"screen_name":123}}'))
+        self.assertTrue(listener.on_data('{"text":"   ","user":{"screen_name":"academy"}}'))
         self.assertTrue(listener.on_data('{"text":"missing user"}'))
         self.assertEqual([], client.TweetDB.tweets.documents)
 

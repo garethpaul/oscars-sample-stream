@@ -56,6 +56,8 @@ The setup commands above are derived from repository files. Legacy mobile, Pytho
 - Configure MongoDB with `MONGOHQ_URL` or `MONGO_URL`.
 - Run `python sample_stream.py` or the Heroku `worker` process from `Procfile`.
 - The default stream filter is `#oscars`.
+- Required stream fields are normalized before storage: `text` and
+  `screen_name` must be non-empty strings after trimming whitespace.
 
 ## Testing and Verification
 
@@ -77,6 +79,8 @@ When the required SDK or runtime is unavailable, use static checks and source re
 - Review changes touching file, media, JSON, XML, CSV, OCR, or data parsing; examples from the scan include sample_stream.py.
 - The test suite uses no-network tests with fake Tweepy and MongoDB clients so
   stream behavior can be verified without live credentials.
+- Non-string or whitespace-only required stream fields are ignored instead of
+  being written to MongoDB.
 
 ## Maintenance Notes
 

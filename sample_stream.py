@@ -10,6 +10,13 @@ import config
 TRACK_TERMS = ["#oscars"]
 
 
+def clean_required_text(value):
+    if not isinstance(value, str):
+        return None
+    value = value.strip()
+    return value or None
+
+
 def create_api():
     auth = tweepy.OAuthHandler(config.consumer_key, config.consumer_secret)
     auth.set_access_token(config.access_key, config.access_secret)
@@ -34,8 +41,8 @@ class CustomStreamListener(tweepy.StreamListener):
         user = data.get("user") or {}
         if not isinstance(user, dict):
             return True
-        text = data.get("text")
-        screen_name = user.get("screen_name")
+        text = clean_required_text(data.get("text"))
+        screen_name = clean_required_text(user.get("screen_name"))
         if not text or not screen_name:
             return True
 

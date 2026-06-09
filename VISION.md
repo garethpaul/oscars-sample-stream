@@ -28,11 +28,13 @@ Priority:
 - Keep no-network tests available for stream startup and payload handling
 - Treat malformed, non-object, and incomplete stream payloads as ignorable
   worker input
+- Normalize required stream fields before MongoDB writes
 
 Next priorities:
 
 - Add a dry-run or mock-stream path for local testing
 - Move configuration examples into environment-variable documentation
+- Document retention and cleanup expectations for stored stream fields
 - Update dependencies only after documenting API compatibility changes
 
 Contribution rules:

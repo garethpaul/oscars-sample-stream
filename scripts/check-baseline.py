@@ -20,6 +20,7 @@ REQUIRED = [
     "config.py",
     "docs/readme-overview.svg",
     PLAN,
+    "docs/plans/2026-06-09-stream-field-normalization.md",
     "requirements.txt",
     "sample_stream.py",
     "scripts/check-baseline.py",
@@ -56,11 +57,13 @@ def main():
         "def create_api",
         "def create_stream",
         "def start_stream",
+        "def clean_required_text",
         "streaming_api.filter",
         "if __name__ == \"__main__\"",
         "except ValueError",
         "isinstance(data, dict)",
         "isinstance(user, dict)",
+        "value.strip()",
         "datetime.timezone.utc",
     ]:
         if phrase not in stream:
@@ -74,6 +77,8 @@ def main():
         "FakeMongoClient",
         "test_start_stream_filters_for_oscars",
         "bad user",
+        "bad name",
+        "text\":123",
         "[]",
     ]:
         if phrase not in tests:
@@ -90,13 +95,16 @@ def main():
             failures.append(f".gitignore must include {phrase}")
 
     docs = "\n".join(read(path) for path in ["README.md", "SECURITY.md", "VISION.md"])
-    for phrase in ["make check", "MONGOHQ_URL", "#oscars", "no-network tests", "Twitter credentials"]:
+    for phrase in ["make check", "MONGOHQ_URL", "#oscars", "no-network tests", "Twitter credentials", "required stream fields"]:
         if phrase.lower() not in docs.lower():
             failures.append(f"docs must mention {phrase}")
 
     plan = read(PLAN)
     if "status: completed" not in plan or "make check" not in plan:
         failures.append("plan must record completed status and verification")
+    field_plan = read("docs/plans/2026-06-09-stream-field-normalization.md")
+    if "status: completed" not in field_plan or "clean_required_text" not in field_plan:
+        failures.append("field normalization plan must record completed status and verification")
 
     try:
         ET.parse(ROOT / "docs/readme-overview.svg")

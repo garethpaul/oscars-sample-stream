@@ -39,6 +39,8 @@ For web services, APIs, sockets, or scraping workflows, prioritize reports invol
 For this worker, also review stream filters, retained fields, MongoDB writes,
 and error handling around malformed payloads. Run `make check` before changing
 credential handling or stream startup.
+Required stream fields should be strings with meaningful content after
+whitespace trimming before they are written to MongoDB.
 
 ## Dependency and Supply Chain Security
 

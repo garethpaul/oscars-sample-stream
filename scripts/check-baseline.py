@@ -28,6 +28,7 @@ REQUIRED = [
     "docs/plans/2026-06-09-mapping-track-terms.md",
     "docs/plans/2026-06-09-make-gate-aliases.md",
     "docs/plans/2026-06-09-bytecode-free-verification.md",
+    "docs/plans/2026-06-10-explicit-mongo-client-injection.md",
     "requirements.txt",
     "sample_stream.py",
     "scripts/check-baseline.py",
@@ -78,6 +79,7 @@ def main():
         "isinstance(track_terms, Mapping)",
         "except TypeError",
         "except (TypeError, ValueError)",
+        "mongo_client is not None",
     ]:
         if phrase not in stream:
             failures.append(f"sample_stream.py must include {phrase}")
@@ -101,6 +103,8 @@ def main():
         "test_start_stream_rejects_non_iterable_custom_track_terms",
         "test_start_stream_rejects_mapping_custom_track_terms",
         "UserDict",
+        "FalsyMongoClient",
+        "test_listener_uses_explicit_falsy_mongo_client",
     ]:
         if phrase not in tests:
             failures.append(f"test_sample_stream.py must include {phrase}")
@@ -146,6 +150,7 @@ def main():
         "make build",
         "make verify",
         "Python bytecode",
+        "explicit MongoDB client injection",
     ]:
         if phrase.lower() not in docs.lower():
             failures.append(f"docs must mention {phrase}")
@@ -178,6 +183,12 @@ def main():
     bytecode_plan = read("docs/plans/2026-06-09-bytecode-free-verification.md")
     if "status: completed" not in bytecode_plan or "Python bytecode" not in bytecode_plan:
         failures.append("bytecode-free verification plan must record completed status and verification")
+    mongo_client_plan = read("docs/plans/2026-06-10-explicit-mongo-client-injection.md")
+    if (
+        "status: completed" not in mongo_client_plan
+        or "explicit MongoDB client injection" not in mongo_client_plan
+    ):
+        failures.append("explicit MongoDB client injection plan must record completed status and verification")
 
     try:
         ET.parse(ROOT / "docs/readme-overview.svg")

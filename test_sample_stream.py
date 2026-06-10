@@ -51,6 +51,11 @@ class FakeMongoClient:
         self.TweetDB = types.SimpleNamespace(tweets=FakeTweets())
 
 
+class FalsyMongoClient(FakeMongoClient):
+    def __bool__(self):
+        return False
+
+
 ENV_NAMES = [
     "consumer_key",
     "consumer_secret",
@@ -164,6 +169,14 @@ class SampleStreamTest(unittest.TestCase):
         self.assertEqual("academy", document["screen_name"])
         self.assertIn("date", document)
         self.assertIsNotNone(document["date"].tzinfo)
+
+    def test_listener_uses_explicit_falsy_mongo_client(self):
+        sample_stream = load_sample_stream()
+        client = FalsyMongoClient("mongodb://example.invalid/db")
+
+        listener = sample_stream.CustomStreamListener(api=object(), mongo_client=client)
+
+        self.assertIs(client.TweetDB, listener.db)
 
     def test_listener_ignores_malformed_or_incomplete_payloads(self):
         sample_stream = load_sample_stream()

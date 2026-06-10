@@ -50,7 +50,11 @@ class CustomStreamListener(tweepy.StreamListener):
     def __init__(self, api, mongo_client=None):
         self.api = api
         super(CustomStreamListener, self).__init__()
-        client = mongo_client or pymongo.MongoClient(config.mongo_url)
+        client = (
+            mongo_client
+            if mongo_client is not None
+            else pymongo.MongoClient(config.mongo_url)
+        )
         self.db = client.TweetDB
 
     def on_data(self, tweet):

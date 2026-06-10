@@ -66,6 +66,8 @@ The setup commands above are derived from repository files. Legacy mobile, Pytho
   implicit track terms.
 - Non-string raw stream payloads are ignored like malformed JSON so the worker
   keeps running on unexpected callbacks.
+- Explicit MongoDB client injection is honored for no-network tests instead of
+  falling back to a configured MongoDB URL when a fake client is falsy.
 - Required stream fields are normalized before storage: `text` and
   `screen_name` must be non-empty strings after trimming whitespace.
 - Local verification runs with Python bytecode writes disabled so no
@@ -107,6 +109,8 @@ When the required SDK or runtime is unavailable, use static checks and source re
 - Mapping custom stream filters should fail validation instead of deriving track
   terms from dictionary keys.
 - Non-string raw stream payloads should not terminate the streaming worker.
+- Explicit MongoDB client injection should stay reliable for fake clients used
+  in no-network tests.
 
 ## Maintenance Notes
 

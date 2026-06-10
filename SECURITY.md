@@ -53,6 +53,8 @@ Mapping custom stream filters should fail validation rather than deriving
 collection scope from dictionary keys.
 Non-string raw stream payloads should be ignored like malformed JSON rather
 than terminating the worker.
+Explicit MongoDB client injection should be honored in no-network tests so fake
+clients cannot fall through to configured MongoDB URLs.
 Python bytecode is local tooling output and should not remain after no-network
 verification gates.
 

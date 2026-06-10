@@ -7,6 +7,11 @@
 - Made no-network verification bytecode-free and added a guard against leftover
   Python bytecode.
 
+## 2026-06-10
+
+- Honored explicit MongoDB client injection even when a fake no-network client
+  is falsy.
+
 ## 2026-06-08
 
 - Fixed environment configuration by replacing the undefined `ENV` lookup with

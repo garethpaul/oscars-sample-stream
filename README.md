@@ -81,6 +81,8 @@ The setup commands above are derived from repository files. Legacy mobile, Pytho
 - `make verify`
 - `python3 -m unittest discover -v`
 - `python3 scripts/check-baseline.py`
+- Pinned hosted Linux validation runs the no-network `make check` gate on
+  Python 3.10 and 3.12 without installing Tweepy, PyMongo, or using credentials.
 
 When the required SDK or runtime is unavailable, use static checks and source review first, then verify on a machine that has the matching platform toolchain.
 
@@ -119,6 +121,8 @@ When the required SDK or runtime is unavailable, use static checks and source re
   `#oscars` filter.
 - See `CHANGES.md` and `docs/plans/2026-06-08-oscars-stream-baseline.md` for
   the current worker baseline.
+- See `docs/plans/2026-06-10-hosted-no-network-validation.md` for the hosted
+  Linux no-network test contract.
 - See `SECURITY.md` for vulnerability reporting and safe research guidance.
 - See `VISION.md` for project direction and contribution guardrails.
 

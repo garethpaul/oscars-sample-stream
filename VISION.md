@@ -38,6 +38,8 @@ Priority:
 - Keep non-string raw stream payloads non-fatal
 - Keep explicit MongoDB client injection reliable for no-network tests
 - Keep verification targets from leaving Python bytecode behind
+- Keep Python 3.10 and 3.12 hosted Linux validation credential-free and
+  no-network
 
 Next priorities:
 

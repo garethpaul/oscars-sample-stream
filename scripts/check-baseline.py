@@ -9,7 +9,9 @@ import xml.etree.ElementTree as ET
 
 ROOT = Path(__file__).resolve().parents[1]
 PLAN = "docs/plans/2026-06-08-oscars-stream-baseline.md"
+HOSTED_VALIDATION_PLAN = "docs/plans/2026-06-10-hosted-no-network-validation.md"
 REQUIRED = [
+    ".github/workflows/check.yml",
     ".gitignore",
     "CHANGES.md",
     "Makefile",
@@ -29,6 +31,7 @@ REQUIRED = [
     "docs/plans/2026-06-09-make-gate-aliases.md",
     "docs/plans/2026-06-09-bytecode-free-verification.md",
     "docs/plans/2026-06-10-explicit-mongo-client-injection.md",
+    HOSTED_VALIDATION_PLAN,
     "requirements.txt",
     "sample_stream.py",
     "scripts/check-baseline.py",
@@ -121,6 +124,21 @@ def main():
         if phrase not in makefile:
             failures.append(f"Makefile must include {phrase}")
 
+    workflow = read(".github/workflows/check.yml")
+    for expected in [
+        "permissions:\n  contents: read",
+        "cancel-in-progress: true",
+        "runs-on: ubuntu-24.04",
+        "timeout-minutes: 10",
+        "actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10",
+        "actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405",
+        'python-version: ["3.10", "3.12"]',
+        "PYTHONDONTWRITEBYTECODE: \"1\"",
+        "run: make check",
+    ]:
+        if expected not in workflow:
+            failures.append(f"Check workflow must keep {expected}")
+
     gitignore = read(".gitignore")
     for phrase in [".env", ".env.*", "__pycache__/", "*.log", "tmp/"]:
         if phrase not in gitignore:
@@ -151,6 +169,7 @@ def main():
         "make verify",
         "Python bytecode",
         "explicit MongoDB client injection",
+        "hosted Linux",
     ]:
         if phrase.lower() not in docs.lower():
             failures.append(f"docs must mention {phrase}")
@@ -189,6 +208,9 @@ def main():
         or "explicit MongoDB client injection" not in mongo_client_plan
     ):
         failures.append("explicit MongoDB client injection plan must record completed status and verification")
+    hosted_validation_plan = read(HOSTED_VALIDATION_PLAN)
+    if "status: completed" not in hosted_validation_plan or "make check" not in hosted_validation_plan:
+        failures.append("hosted no-network validation plan must record completed status and verification")
 
     try:
         ET.parse(ROOT / "docs/readme-overview.svg")

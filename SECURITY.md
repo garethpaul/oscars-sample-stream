@@ -57,6 +57,8 @@ Explicit MongoDB client injection should be honored in no-network tests so fake
 clients cannot fall through to configured MongoDB URLs.
 Python bytecode is local tooling output and should not remain after no-network
 verification gates.
+Pinned, read-only hosted Linux validation runs the fake-client baseline on two
+Python versions without credentials, live Twitter calls, or MongoDB access.
 
 ## Dependency and Supply Chain Security
 

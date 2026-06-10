@@ -9,6 +9,8 @@
 
 ## 2026-06-10
 
+- Added pinned, read-only hosted Linux validation on Python 3.10 and 3.12 for
+  the credential-free no-network baseline.
 - Honored explicit MongoDB client injection even when a fake no-network client
   is falsy.
 

@@ -64,6 +64,8 @@ The setup commands above are derived from repository files. Legacy mobile, Pytho
   instead of raising a raw type error.
 - Mapping custom stream filters are rejected instead of treating mapping keys as
   implicit track terms.
+- Bounded track term preflight runs before API or Mongo-backed listener setup
+  and rejects custom iterables containing more than 100 values.
 - Non-string raw stream payloads are ignored like malformed JSON so the worker
   keeps running on unexpected callbacks.
 - Explicit MongoDB client injection is honored for no-network tests instead of

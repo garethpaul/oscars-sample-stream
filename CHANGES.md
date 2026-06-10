@@ -13,6 +13,8 @@
   the credential-free no-network baseline.
 - Honored explicit MongoDB client injection even when a fake no-network client
   is falsy.
+- Added bounded track term preflight before API and Mongo-backed listener setup,
+  rejecting custom iterables above 100 values.
 
 ## 2026-06-08
 

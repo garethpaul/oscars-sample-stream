@@ -31,6 +31,7 @@ REQUIRED = [
     "docs/plans/2026-06-09-make-gate-aliases.md",
     "docs/plans/2026-06-09-bytecode-free-verification.md",
     "docs/plans/2026-06-10-explicit-mongo-client-injection.md",
+    "docs/plans/2026-06-10-bounded-track-term-preflight.md",
     HOSTED_VALIDATION_PLAN,
     "requirements.txt",
     "sample_stream.py",
@@ -70,6 +71,9 @@ def main():
         "def start_stream",
         "def clean_required_text",
         "def clean_track_terms",
+        "MAX_TRACK_TERMS = 100",
+        "cleaned_track_terms = clean_track_terms(track_terms)",
+        "track_terms must not include more than 100 values",
         "isinstance(track_terms, str)",
         "streaming_api.filter",
         "if __name__ == \"__main__\"",
@@ -108,6 +112,8 @@ def main():
         "UserDict",
         "FalsyMongoClient",
         "test_listener_uses_explicit_falsy_mongo_client",
+        "test_start_stream_validates_track_terms_before_client_setup",
+        "test_start_stream_rejects_more_than_one_hundred_track_terms",
     ]:
         if phrase not in tests:
             failures.append(f"test_sample_stream.py must include {phrase}")
@@ -169,6 +175,7 @@ def main():
         "make verify",
         "Python bytecode",
         "explicit MongoDB client injection",
+        "bounded track term preflight",
         "hosted Linux",
     ]:
         if phrase.lower() not in docs.lower():
@@ -208,6 +215,9 @@ def main():
         or "explicit MongoDB client injection" not in mongo_client_plan
     ):
         failures.append("explicit MongoDB client injection plan must record completed status and verification")
+    bounded_track_plan = read("docs/plans/2026-06-10-bounded-track-term-preflight.md")
+    if "status: completed" not in bounded_track_plan or "100-term" not in bounded_track_plan:
+        failures.append("bounded track term plan must record completed status and verification")
     hosted_validation_plan = read(HOSTED_VALIDATION_PLAN)
     if "status: completed" not in hosted_validation_plan or "make check" not in hosted_validation_plan:
         failures.append("hosted no-network validation plan must record completed status and verification")

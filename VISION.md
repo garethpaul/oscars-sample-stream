@@ -35,6 +35,7 @@ Priority:
 - Keep custom stream filters explicit and reject empty filter sets
 - Keep non-iterable custom stream filters on the validation path
 - Keep mapping custom stream filters on the validation path
+- Keep bounded track term preflight ahead of API and listener setup
 - Keep non-string raw stream payloads non-fatal
 - Keep explicit MongoDB client injection reliable for no-network tests
 - Keep verification targets from leaving Python bytecode behind
@@ -44,6 +45,7 @@ Priority:
 Next priorities:
 
 - Add a dry-run or mock-stream path for local testing
+- Add filter boundary fixtures without expanding collection scope defaults
 - Move configuration examples into environment-variable documentation
 - Document retention and cleanup expectations for stored stream fields
 - Keep fake-client injection covered before changing MongoDB setup

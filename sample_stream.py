@@ -9,6 +9,7 @@ import config
 
 
 TRACK_TERMS = ["#oscars"]
+MAX_TRACK_TERMS = 100
 
 
 def clean_required_text(value):
@@ -31,7 +32,9 @@ def clean_track_terms(track_terms):
         except TypeError:
             track_terms = [track_terms]
     cleaned = []
-    for term in track_terms:
+    for index, term in enumerate(track_terms):
+        if index >= MAX_TRACK_TERMS:
+            raise ValueError("track_terms must not include more than 100 values")
         clean_term = clean_required_text(term)
         if clean_term:
             cleaned.append(clean_term)
@@ -92,9 +95,10 @@ def create_stream(api):
 
 
 def start_stream(track_terms=None):
+    cleaned_track_terms = clean_track_terms(track_terms)
     api = create_api()
     streaming_api = create_stream(api)
-    streaming_api.filter(track=clean_track_terms(track_terms))
+    streaming_api.filter(track=cleaned_track_terms)
     return streaming_api
 
 

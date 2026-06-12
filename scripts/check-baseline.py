@@ -9,8 +9,9 @@ import xml.etree.ElementTree as ET
 
 ROOT = Path(__file__).resolve().parents[1]
 PLAN = "docs/plans/2026-06-08-oscars-stream-baseline.md"
-CI_PLAN = "docs/plans/2026-06-10-ci-baseline.md"
+HOSTED_VALIDATION_PLAN = "docs/plans/2026-06-10-hosted-no-network-validation.md"
 REQUIRED = [
+    ".github/CODEOWNERS",
     ".github/workflows/check.yml",
     ".gitignore",
     "CHANGES.md",
@@ -31,7 +32,8 @@ REQUIRED = [
     "docs/plans/2026-06-09-make-gate-aliases.md",
     "docs/plans/2026-06-09-bytecode-free-verification.md",
     "docs/plans/2026-06-10-explicit-mongo-client-injection.md",
-    CI_PLAN,
+    "docs/plans/2026-06-10-bounded-track-term-preflight.md",
+    HOSTED_VALIDATION_PLAN,
     "requirements.txt",
     "sample_stream.py",
     "scripts/check-baseline.py",
@@ -70,6 +72,9 @@ def main():
         "def start_stream",
         "def clean_required_text",
         "def clean_track_terms",
+        "MAX_TRACK_TERMS = 100",
+        "cleaned_track_terms = clean_track_terms(track_terms)",
+        "track_terms must not include more than 100 values",
         "isinstance(track_terms, str)",
         "streaming_api.filter",
         "if __name__ == \"__main__\"",
@@ -108,6 +113,8 @@ def main():
         "UserDict",
         "FalsyMongoClient",
         "test_listener_uses_explicit_falsy_mongo_client",
+        "test_start_stream_validates_track_terms_before_client_setup",
+        "test_start_stream_rejects_more_than_one_hundred_track_terms",
     ]:
         if phrase not in tests:
             failures.append(f"test_sample_stream.py must include {phrase}")
@@ -125,13 +132,26 @@ def main():
             failures.append(f"Makefile must include {phrase}")
 
     workflow = read(".github/workflows/check.yml")
-    for phrase in [
-        "actions/setup-python@v5",
-        'python-version: "3.12"',
-        "make check",
+    codeowners = read(".github/CODEOWNERS")
+    for expected in [
+        "permissions:\n  contents: read",
+        "cancel-in-progress: true",
+        "runs-on: ubuntu-24.04",
+        "timeout-minutes: 10",
+        "actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10",
+        "persist-credentials: false",
+        "actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405",
+        'python-version: ["3.10", "3.12"]',
+        "PYTHONDONTWRITEBYTECODE: \"1\"",
+        "run: make check",
     ]:
-        if phrase not in workflow:
-            failures.append(f"GitHub Actions workflow must include {phrase}")
+        if expected not in workflow:
+            failures.append(f"Check workflow must keep {expected}")
+    workflow_files = sorted(str(path.relative_to(ROOT)) for path in (ROOT / ".github/workflows").rglob("*") if path.is_file())
+    if workflow_files != [".github/workflows/check.yml"]:
+        failures.append("check.yml must be the repository's only hosted workflow")
+    if codeowners.strip() != "* @garethpaul":
+        failures.append("CODEOWNERS must assign the repository to @garethpaul")
 
     gitignore = read(".gitignore")
     for phrase in [".env", ".env.*", "__pycache__/", "*.log", "tmp/"]:
@@ -163,7 +183,8 @@ def main():
         "make verify",
         "Python bytecode",
         "explicit MongoDB client injection",
-        "GitHub Actions",
+        "bounded track term preflight",
+        "hosted Linux",
     ]:
         if phrase.lower() not in docs.lower():
             failures.append(f"docs must mention {phrase}")
@@ -202,9 +223,15 @@ def main():
         or "explicit MongoDB client injection" not in mongo_client_plan
     ):
         failures.append("explicit MongoDB client injection plan must record completed status and verification")
-    ci_plan = read(CI_PLAN)
-    if "status: completed" not in ci_plan or "GitHub Actions" not in ci_plan or "make check" not in ci_plan:
-        failures.append("CI baseline plan must record completed status and make check verification")
+    bounded_track_plan = read("docs/plans/2026-06-10-bounded-track-term-preflight.md")
+    if "status: completed" not in bounded_track_plan or "100-term" not in bounded_track_plan:
+        failures.append("bounded track term plan must record completed status and verification")
+    hosted_validation_plan = read(HOSTED_VALIDATION_PLAN)
+    prepared_ci_plan = read("docs/plans/2026-06-10-ci-baseline.md")
+    if "status: completed" not in prepared_ci_plan or "make check" not in prepared_ci_plan:
+        failures.append("CI baseline plan must record completed status and verification")
+    if "status: completed" not in hosted_validation_plan or "make check" not in hosted_validation_plan:
+        failures.append("hosted no-network validation plan must record completed status and verification")
 
     try:
         ET.parse(ROOT / "docs/readme-overview.svg")

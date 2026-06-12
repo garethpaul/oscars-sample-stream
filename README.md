@@ -64,6 +64,8 @@ The setup commands above are derived from repository files. Legacy mobile, Pytho
   instead of raising a raw type error.
 - Mapping custom stream filters are rejected instead of treating mapping keys as
   implicit track terms.
+- Bounded track term preflight runs before API or Mongo-backed listener setup
+  and rejects custom iterables containing more than 100 values.
 - Non-string raw stream payloads are ignored like malformed JSON so the worker
   keeps running on unexpected callbacks.
 - Explicit MongoDB client injection is honored for no-network tests instead of
@@ -81,9 +83,9 @@ The setup commands above are derived from repository files. Legacy mobile, Pytho
 - `make verify`
 - `python3 -m unittest discover -v`
 - `python3 scripts/check-baseline.py`
-
-GitHub Actions runs the same no-network `make check` baseline on pushes and
-pull requests without requiring Twitter credentials or a MongoDB service.
+- Pinned hosted Linux validation runs the no-network `make check` gate on
+  Python 3.10 and 3.12 without installing Tweepy, PyMongo, or using credentials.
+- GitHub Actions runs that canonical baseline for pushes and pull requests.
 
 When the required SDK or runtime is unavailable, use static checks and source review first, then verify on a machine that has the matching platform toolchain.
 
@@ -122,7 +124,9 @@ When the required SDK or runtime is unavailable, use static checks and source re
   `#oscars` filter.
 - See `CHANGES.md` and `docs/plans/2026-06-08-oscars-stream-baseline.md` for
   the current worker baseline.
-- See `docs/plans/2026-06-10-ci-baseline.md` for the GitHub Actions baseline.
+- See `docs/plans/2026-06-10-hosted-no-network-validation.md` for the hosted
+  Linux no-network test contract.
+- See `docs/plans/2026-06-10-ci-baseline.md` for the original CI baseline scope.
 - See `SECURITY.md` for vulnerability reporting and safe research guidance.
 - See `VISION.md` for project direction and contribution guardrails.
 

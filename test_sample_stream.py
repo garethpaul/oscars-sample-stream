@@ -143,6 +143,23 @@ class SampleStreamTest(unittest.TestCase):
         with self.assertRaises(ValueError):
             sample_stream.start_stream(UserDict({"track": "#oscars"}))
 
+    def test_start_stream_validates_track_terms_before_client_setup(self):
+        sample_stream = load_sample_stream()
+
+        def fail_create_api():
+            self.fail("invalid track terms reached API client setup")
+
+        sample_stream.create_api = fail_create_api
+        with self.assertRaises(ValueError):
+            sample_stream.start_stream([" "])
+
+    def test_start_stream_rejects_more_than_one_hundred_track_terms(self):
+        sample_stream = load_sample_stream()
+        track_terms = ("term-{}".format(index) for index in range(101))
+
+        with self.assertRaisesRegex(ValueError, "more than 100"):
+            sample_stream.start_stream(track_terms)
+
     def test_config_ignores_blank_env_values_and_uses_fallback(self):
         sample_stream = load_sample_stream(
             {

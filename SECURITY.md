@@ -51,15 +51,17 @@ Non-iterable custom stream filters should fail validation before stream
 startup.
 Mapping custom stream filters should fail validation rather than deriving
 collection scope from dictionary keys.
+Bounded track term preflight should reject oversized iterables before API or
+Mongo-backed listener setup.
 Non-string raw stream payloads should be ignored like malformed JSON rather
 than terminating the worker.
 Explicit MongoDB client injection should be honored in no-network tests so fake
 clients cannot fall through to configured MongoDB URLs.
 Python bytecode is local tooling output and should not remain after no-network
 verification gates.
-GitHub Actions runs the same no-network `make check` baseline and must not be
-extended with live Twitter, MongoDB, or credentialed deployment steps without a
-separate review.
+Pinned, read-only hosted Linux validation runs the fake-client baseline on two
+Python versions without credentials, live Twitter calls, or MongoDB access.
+Keep GitHub Actions aligned with the canonical `make check` baseline.
 
 ## Dependency and Supply Chain Security
 

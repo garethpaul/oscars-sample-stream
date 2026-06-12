@@ -72,7 +72,8 @@ injection, and rate-limit disconnect behavior.
 - Pinned Tweepy 4.16.0 and PyMongo 4.17.0, locked the ten-package production
   graph, and replaced the removed listener and collection insertion interfaces.
 - Added bearer-token API v2 streaming, bounded literal rule generation, and
-  replacement limited to rules tagged `oscars-sample-stream`.
+  replacement limited to rules tagged `oscars-sample-stream`; prior tagged
+  rules are deleted only after the API confirms the replacement was created.
 - Required expanded author identity before normalized text and username are
   written through `insert_one`.
 - Preserved validation-before-setup, explicit falsy Mongo client injection,
@@ -87,9 +88,10 @@ injection, and rate-limit disconnect behavior.
   Python `>=3.9` metadata.
 - `pip-audit -r requirements.lock` reported no known vulnerabilities for the
   resolved production graph.
-- `python3 -m unittest -v test_sample_stream.py` passed 11 no-network tests for
+- `python3 -m unittest -v test_sample_stream.py` passed 12 no-network tests for
   tagged rules, literal and byte-bounded filters, author expansion, malformed
-  payloads, `insert_one`, explicit falsy clients, and 420/429 disconnects.
+  payloads, API-level rule rejection, `insert_one`, explicit falsy clients,
+  and 420/429 disconnects.
 - `make lint`, `make test`, `make build`, `make check`, Python compilation,
   workflow parsing, and `git diff --check` passed in the isolated Python 3.12
   environment.

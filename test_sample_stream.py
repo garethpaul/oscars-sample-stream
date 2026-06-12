@@ -16,6 +16,7 @@ class FakeStreamRule:
 
 class FakeStreamingClient:
     initial_rules = []
+    add_errors = None
 
     def __init__(self, bearer_token, **options):
         self.bearer_token = bearer_token
@@ -37,6 +38,10 @@ class FakeStreamingClient:
     def add_rules(self, rules):
         self.added_rules.append(rules)
         self.rule_operations.append("add")
+        return types.SimpleNamespace(
+            data=None if self.add_errors else [FakeStreamRule(id="new", tag=rules.tag)],
+            errors=self.add_errors,
+        )
 
     def filter(self, **options):
         self.filter_options = options
@@ -81,6 +86,7 @@ def load_sample_stream(overrides=None, rules=None):
         os.environ[key] = value
 
     FakeStreamingClient.initial_rules = list(rules or [])
+    FakeStreamingClient.add_errors = None
     sys.modules["tweepy"] = types.SimpleNamespace(
         StreamingClient=FakeStreamingClient,
         StreamRule=FakeStreamRule,
@@ -125,6 +131,22 @@ class SampleStreamTest(unittest.TestCase):
         self.assertEqual(["ours"], stream.deleted_rule_ids)
         self.assertEqual('#oscars2026 OR "best picture"', stream.added_rules[0].value)
         self.assertEqual(["add", "delete"], stream.rule_operations)
+
+    def test_rejected_replacement_rule_preserves_existing_rule(self):
+        rules = [FakeStreamRule(id="ours", tag="oscars-sample-stream")]
+        sample_stream = load_sample_stream(rules=rules)
+        FakeStreamingClient.add_errors = [{"message": "invalid rule"}]
+
+        with self.assertRaisesRegex(RuntimeError, "rejected the replacement"):
+            sample_stream.start_stream()
+
+        stream = sample_stream.OscarsStream("bearer", mongo_client=FakeMongoClient("mongodb://example.invalid/db"))
+        stream.rules = rules
+        FakeStreamingClient.add_errors = [{"message": "invalid rule"}]
+        with self.assertRaises(RuntimeError):
+            sample_stream.sync_stream_rule(stream, "#oscars")
+        self.assertEqual([], stream.deleted_rule_ids)
+        self.assertEqual(["add"], stream.rule_operations)
 
     def test_rule_terms_are_literal_and_bounded(self):
         sample_stream = load_sample_stream()

@@ -115,6 +115,8 @@ def main():
         "self.disconnect()",
         "tweepy.StreamRule(value=rule_value, tag=RULE_TAG)",
         "stream.delete_rules(existing_ids)",
+        "if result.errors or not result.data",
+        "Twitter/X rejected the replacement stream rule",
     ]:
         if phrase not in stream:
             failures.append(f"sample_stream.py must include {phrase}")
@@ -132,6 +134,7 @@ def main():
         "test_config_ignores_blank_bearer_token_and_uses_fallback",
         "test_start_stream_configures_tagged_oscars_rule",
         "test_start_stream_replaces_only_worker_tagged_rules",
+        "test_rejected_replacement_rule_preserves_existing_rule",
         "test_rule_terms_are_literal_and_bounded",
         "test_start_stream_accepts_single_custom_track_term",
         "test_start_stream_rejects_invalid_track_terms_before_client_setup",
@@ -324,7 +327,7 @@ urllib3==2.7.0
         "PyMongo 4.17.0",
         "pip-audit -r requirements.lock",
         "no known vulnerabilities",
-        "11 no-network tests",
+        "12 no-network tests",
         "oscars-sample-stream",
         "insert_one",
         "420/429 disconnects",

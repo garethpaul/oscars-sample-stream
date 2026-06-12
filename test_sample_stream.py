@@ -1,4 +1,5 @@
 import importlib
+import json
 import os
 import sys
 import types
@@ -6,42 +7,49 @@ import unittest
 from collections import UserDict
 
 
-class FakeOAuthHandler:
-    def __init__(self, consumer_key, consumer_secret):
-        self.consumer_key = consumer_key
-        self.consumer_secret = consumer_secret
-        self.access_key = None
-        self.access_secret = None
-
-    def set_access_token(self, access_key, access_secret):
-        self.access_key = access_key
-        self.access_secret = access_secret
+class FakeStreamRule:
+    def __init__(self, value=None, tag=None, id=None):
+        self.value = value
+        self.tag = tag
+        self.id = id
 
 
-class FakeAPI:
-    def __init__(self, auth):
-        self.auth = auth
+class FakeStreamingClient:
+    initial_rules = []
 
+    def __init__(self, bearer_token, **options):
+        self.bearer_token = bearer_token
+        self.options = options
+        self.deleted_rule_ids = []
+        self.added_rules = []
+        self.filter_options = None
+        self.disconnected = False
+        self.rules = list(self.initial_rules)
+        self.rule_operations = []
 
-class FakeStreamListener:
-    pass
+    def get_rules(self):
+        return types.SimpleNamespace(data=self.rules)
 
+    def delete_rules(self, ids):
+        self.deleted_rule_ids.extend(ids)
+        self.rule_operations.append("delete")
 
-class FakeStream:
-    def __init__(self, auth, listener):
-        self.auth = auth
-        self.listener = listener
-        self.filtered_track = None
+    def add_rules(self, rules):
+        self.added_rules.append(rules)
+        self.rule_operations.append("add")
 
-    def filter(self, track):
-        self.filtered_track = track
+    def filter(self, **options):
+        self.filter_options = options
+
+    def disconnect(self):
+        self.disconnected = True
 
 
 class FakeTweets:
     def __init__(self):
         self.documents = []
 
-    def insert(self, document):
+    def insert_one(self, document):
         self.documents.append(document)
 
 
@@ -56,26 +64,12 @@ class FalsyMongoClient(FakeMongoClient):
         return False
 
 
-ENV_NAMES = [
-    "consumer_key",
-    "consumer_secret",
-    "access_key",
-    "access_secret",
-    "MONGOHQ_URL",
-    "CONSUMER_KEY",
-    "CONSUMER_SECRET",
-    "ACCESS_KEY",
-    "ACCESS_SECRET",
-    "MONGO_URL",
-]
+ENV_NAMES = ["bearer_token", "BEARER_TOKEN", "MONGOHQ_URL", "MONGO_URL"]
 
 
-def load_sample_stream(overrides=None):
+def load_sample_stream(overrides=None, rules=None):
     values = {
-        "consumer_key": "consumer",
-        "consumer_secret": "consumer-secret",
-        "access_key": "access",
-        "access_secret": "access-secret",
+        "bearer_token": "bearer",
         "MONGOHQ_URL": "mongodb://example.invalid/db",
     }
     if overrides:
@@ -86,72 +80,74 @@ def load_sample_stream(overrides=None):
     for key, value in values.items():
         os.environ[key] = value
 
-    fake_tweepy = types.SimpleNamespace(
-        OAuthHandler=FakeOAuthHandler,
-        API=FakeAPI,
-        StreamListener=FakeStreamListener,
-        streaming=types.SimpleNamespace(Stream=FakeStream),
+    FakeStreamingClient.initial_rules = list(rules or [])
+    sys.modules["tweepy"] = types.SimpleNamespace(
+        StreamingClient=FakeStreamingClient,
+        StreamRule=FakeStreamRule,
     )
-    fake_pymongo = types.SimpleNamespace(MongoClient=FakeMongoClient)
-    sys.modules["tweepy"] = fake_tweepy
-    sys.modules["pymongo"] = fake_pymongo
+    sys.modules["pymongo"] = types.SimpleNamespace(MongoClient=FakeMongoClient)
 
     for module_name in ["config", "sample_stream"]:
         sys.modules.pop(module_name, None)
     return importlib.import_module("sample_stream")
 
 
+def stream_payload(text="  hello oscars  ", author_id="42", username=" academy "):
+    return json.dumps({
+        "data": {"id": "100", "text": text, "author_id": author_id},
+        "includes": {"users": [{"id": author_id, "username": username}]},
+    })
+
+
 class SampleStreamTest(unittest.TestCase):
-    def test_start_stream_filters_for_oscars(self):
+    def test_start_stream_configures_tagged_oscars_rule(self):
         sample_stream = load_sample_stream()
 
         stream = sample_stream.start_stream()
 
-        self.assertEqual(["#oscars"], stream.filtered_track)
+        self.assertEqual("bearer", stream.bearer_token)
+        self.assertEqual("#oscars", stream.added_rules[0].value)
+        self.assertEqual("oscars-sample-stream", stream.added_rules[0].tag)
+        self.assertEqual(
+            {"expansions": ["author_id"], "user_fields": ["username"]},
+            stream.filter_options,
+        )
 
-    def test_start_stream_trims_custom_track_terms(self):
+    def test_start_stream_replaces_only_worker_tagged_rules(self):
+        rules = [
+            FakeStreamRule(id="ours", tag="oscars-sample-stream"),
+            FakeStreamRule(id="theirs", tag="another-worker"),
+        ]
+        sample_stream = load_sample_stream(rules=rules)
+
+        stream = sample_stream.start_stream([" #oscars2026 ", "best picture"])
+
+        self.assertEqual(["ours"], stream.deleted_rule_ids)
+        self.assertEqual('#oscars2026 OR "best picture"', stream.added_rules[0].value)
+        self.assertEqual(["add", "delete"], stream.rule_operations)
+
+    def test_rule_terms_are_literal_and_bounded(self):
         sample_stream = load_sample_stream()
 
-        stream = sample_stream.start_stream([" #oscars2026 ", "", "best picture"])
-
-        self.assertEqual(["#oscars2026", "best picture"], stream.filtered_track)
+        self.assertEqual('"oscars OR awards"', sample_stream.stream_rule_value(["oscars OR awards"]))
+        self.assertEqual('"best \\"picture\\""', sample_stream.stream_rule_value(['best "picture"']))
+        with self.assertRaisesRegex(ValueError, "larger than 512 bytes"):
+            sample_stream.start_stream(["x" * 513])
 
     def test_start_stream_accepts_single_custom_track_term(self):
         sample_stream = load_sample_stream()
 
         stream = sample_stream.start_stream(" #oscars2026 ")
 
-        self.assertEqual(["#oscars2026"], stream.filtered_track)
+        self.assertEqual("#oscars2026", stream.added_rules[0].value)
 
-    def test_start_stream_rejects_empty_custom_track_terms(self):
+    def test_start_stream_rejects_invalid_track_terms_before_client_setup(self):
         sample_stream = load_sample_stream()
-
-        with self.assertRaises(ValueError):
-            sample_stream.start_stream([" ", 123, None])
-
-    def test_start_stream_rejects_non_iterable_custom_track_terms(self):
-        sample_stream = load_sample_stream()
-
-        with self.assertRaises(ValueError):
-            sample_stream.start_stream(123)
-
-    def test_start_stream_rejects_mapping_custom_track_terms(self):
-        sample_stream = load_sample_stream()
-
-        with self.assertRaises(ValueError):
-            sample_stream.start_stream({"track": "#oscars"})
-        with self.assertRaises(ValueError):
-            sample_stream.start_stream(UserDict({"track": "#oscars"}))
-
-    def test_start_stream_validates_track_terms_before_client_setup(self):
-        sample_stream = load_sample_stream()
-
-        def fail_create_api():
-            self.fail("invalid track terms reached API client setup")
-
-        sample_stream.create_api = fail_create_api
-        with self.assertRaises(ValueError):
-            sample_stream.start_stream([" "])
+        for key in ENV_NAMES:
+            os.environ.pop(key, None)
+        for invalid in ([" ", 123, None], 123, {"track": "#oscars"}, UserDict({"track": "#oscars"})):
+            with self.subTest(invalid=invalid), self.assertRaises(ValueError):
+                sample_stream.start_stream(invalid)
 
     def test_start_stream_rejects_more_than_one_hundred_track_terms(self):
         sample_stream = load_sample_stream()
@@ -160,75 +156,70 @@ class SampleStreamTest(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "more than 100"):
             sample_stream.start_stream(track_terms)
 
-    def test_config_ignores_blank_env_values_and_uses_fallback(self):
+    def test_config_ignores_blank_bearer_token_and_uses_fallback(self):
         sample_stream = load_sample_stream(
-            {
-                "consumer_key": "   ",
-                "CONSUMER_KEY": "consumer-fallback",
-            }
+            {"bearer_token": "   ", "BEARER_TOKEN": "bearer-fallback"}
         )
 
-        self.assertEqual("consumer-fallback", sample_stream.config.consumer_key)
+        self.assertEqual("bearer-fallback", sample_stream.config.bearer_token())
 
-    def test_listener_inserts_minimal_tweet_document(self):
+    def test_stream_inserts_minimal_v2_tweet_document(self):
         sample_stream = load_sample_stream()
         client = FakeMongoClient("mongodb://example.invalid/db")
-        listener = sample_stream.CustomStreamListener(api=object(), mongo_client=client)
+        stream = sample_stream.OscarsStream("bearer", mongo_client=client)
 
-        keep_streaming = listener.on_data(
-            '{"text":"  hello oscars  ","user":{"screen_name":" academy "}}'
-        )
+        stream.on_data(stream_payload())
 
-        self.assertTrue(keep_streaming)
         self.assertEqual(1, len(client.TweetDB.tweets.documents))
         document = client.TweetDB.tweets.documents[0]
         self.assertEqual("hello oscars", document["text"])
         self.assertEqual("academy", document["screen_name"])
-        self.assertIn("date", document)
         self.assertIsNotNone(document["date"].tzinfo)
 
-    def test_listener_uses_explicit_falsy_mongo_client(self):
+    def test_stream_uses_explicit_falsy_mongo_client(self):
         sample_stream = load_sample_stream()
         client = FalsyMongoClient("mongodb://example.invalid/db")
 
-        listener = sample_stream.CustomStreamListener(api=object(), mongo_client=client)
+        stream = sample_stream.OscarsStream("bearer", mongo_client=client)
 
-        self.assertIs(client.TweetDB, listener.db)
+        self.assertIs(client.TweetDB, stream.db)
 
-    def test_listener_disconnects_on_stream_rate_limit(self):
+    def test_stream_disconnects_on_rate_limits_only(self):
+        sample_stream = load_sample_stream()
+        stream = sample_stream.OscarsStream(
+            "bearer", mongo_client=FakeMongoClient("mongodb://example.invalid/db")
+        )
+
+        stream.on_request_error(500)
+        self.assertFalse(stream.disconnected)
+        stream.on_request_error(429)
+        self.assertTrue(stream.disconnected)
+
+        stream.disconnected = False
+        stream.on_request_error(420)
+        self.assertTrue(stream.disconnected)
+
+    def test_stream_ignores_malformed_or_incomplete_v2_payloads(self):
         sample_stream = load_sample_stream()
         client = FakeMongoClient("mongodb://example.invalid/db")
-        listener = sample_stream.CustomStreamListener(api=object(), mongo_client=client)
+        stream = sample_stream.OscarsStream("bearer", mongo_client=client)
+        invalid_payloads = [
+            "not-json",
+            None,
+            "[]",
+            '{"data":"tweet"}',
+            stream_payload(text=123),
+            stream_payload(author_id=123),
+            stream_payload(username=123),
+            stream_payload(text="   "),
+            '{"data":{"text":"missing author"},"includes":{"users":[]}}',
+            '{"data":{"text":"missing user","author_id":"42"},"includes":{"users":[]}}',
+            '{"data":{"text":"wrong user","author_id":"42"},"includes":{"users":[{"id":"7","username":"academy"}]}}',
+        ]
 
-        self.assertFalse(listener.on_error(420))
-
-    def test_listener_continues_on_other_stream_errors(self):
-        sample_stream = load_sample_stream()
-        client = FakeMongoClient("mongodb://example.invalid/db")
-        listener = sample_stream.CustomStreamListener(api=object(), mongo_client=client)
-
-        self.assertTrue(listener.on_error(500))
-
-    def test_listener_continues_after_timeout(self):
-        sample_stream = load_sample_stream()
-        client = FakeMongoClient("mongodb://example.invalid/db")
-        listener = sample_stream.CustomStreamListener(api=object(), mongo_client=client)
-
-        self.assertTrue(listener.on_timeout())
-
-    def test_listener_ignores_malformed_or_incomplete_payloads(self):
-        sample_stream = load_sample_stream()
-        client = FakeMongoClient("mongodb://example.invalid/db")
-        listener = sample_stream.CustomStreamListener(api=object(), mongo_client=client)
-
-        self.assertTrue(listener.on_data("not-json"))
-        self.assertTrue(listener.on_data(None))
-        self.assertTrue(listener.on_data("[]"))
-        self.assertTrue(listener.on_data('{"text":"bad user","user":"academy"}'))
-        self.assertTrue(listener.on_data('{"text":123,"user":{"screen_name":"academy"}}'))
-        self.assertTrue(listener.on_data('{"text":"bad name","user":{"screen_name":123}}'))
-        self.assertTrue(listener.on_data('{"text":"   ","user":{"screen_name":"academy"}}'))
-        self.assertTrue(listener.on_data('{"text":"missing user"}'))
+        for payload in invalid_payloads:
+            with self.subTest(payload=payload):
+                stream.on_data(payload)
         self.assertEqual([], client.TweetDB.tweets.documents)
 
 

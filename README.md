@@ -7,14 +7,16 @@
 
 `garethpaul/oscars-sample-stream` is a Python project. Sample Streaming API for #oscars
 
-This README is based on the checked-in source, manifests, scripts, and repository metadata on the `master` branch. The project language mix found during review was: Python (2).
+The maintained worker targets Python 3.9 or newer and uses the Twitter/X API
+v2 filtered stream through Tweepy 4.16.0 `StreamingClient` plus PyMongo 4.17.0.
 
 ## Repository Contents
 
 - `CHANGES.md` - baseline change log
 - `Makefile` - local no-network verification entry point
 - `README.md` - project overview and local usage notes
-- `requirements.txt` - Python dependency or packaging metadata
+- `requirements.txt` - exact direct runtime dependency pins
+- `requirements.lock` - exact resolved production dependency graph
 - `Procfile`
 - `SECURITY.md` - security reporting and disclosure guidance
 - `config.py` - environment-variable configuration loader
@@ -36,27 +38,30 @@ Additional scan context:
 ### Prerequisites
 
 - Git
-- Python matching the era of the project
+- Python 3.9 or newer
 
 ### Setup
 
 ```bash
 git clone https://github.com/garethpaul/oscars-sample-stream.git
 cd oscars-sample-stream
-python -m pip install -r requirements.txt
+python3 -m venv .venv
+. .venv/bin/activate
+python -m pip install -r requirements.lock
 ```
 
-The setup commands above are derived from repository files. Legacy mobile, Python, or JavaScript samples may require older SDKs or package versions than a modern workstation uses by default.
+The exact dependency graph should also pass `pip-audit -r requirements.lock`.
 
 ## Running or Using the Project
 
-- Configure Twitter credentials with `consumer_key`, `consumer_secret`,
-  `access_key`, and `access_secret` environment variables, or uppercase
-  equivalents.
+- Configure a Twitter/X API v2 bearer token with `bearer_token` or
+  `BEARER_TOKEN`.
 - Configure MongoDB with `MONGOHQ_URL` or `MONGO_URL`.
 - Blank environment values are ignored so fallback variable names can be used.
 - Run `python sample_stream.py` or the Heroku `worker` process from `Procfile`.
-- The default stream filter is `#oscars`.
+- The default stream filter is `#oscars`. The worker replaces only persistent
+  API v2 rules tagged `oscars-sample-stream`; unrelated project rules are not
+  deleted.
 - Custom stream filters must contain at least one non-empty string after
   trimming; blank custom stream filters are rejected instead of silently using
   the default.
@@ -70,11 +75,12 @@ The setup commands above are derived from repository files. Legacy mobile, Pytho
   keeps running on unexpected callbacks.
 - Explicit MongoDB client injection is honored for no-network tests instead of
   falling back to a configured MongoDB URL when a fake client is falsy.
-- Required stream fields are normalized before storage: `text` and
-  `screen_name` must be non-empty strings after trimming whitespace.
-- Legacy Twitter streaming status `420` disconnects the listener instead of
-  repeatedly reconnecting while rate limited; other errors and timeouts keep
-  the existing continuation behavior.
+- API v2 author expansion is required before storage: tweet `text` and the
+  matching expanded `username` must be non-empty strings after trimming.
+- Twitter/X streaming statuses `420` and `429` disconnect the client instead
+  of repeatedly reconnecting while rate limited.
+- MongoDB writes use PyMongo `insert_one`; tests preserve explicit falsy client
+  injection without contacting a database.
 - Local verification runs with Python bytecode writes disabled so no
   `__pycache__` output remains after the no-network gates.
 
@@ -86,14 +92,15 @@ The setup commands above are derived from repository files. Legacy mobile, Pytho
 - `make verify`
 - `python3 -m unittest discover -v`
 - `python3 scripts/check-baseline.py`
-- Pinned hosted Linux validation runs the no-network `make check` gate on
-  Python 3.10 and 3.12 without installing Tweepy, PyMongo, or using credentials.
+- Pinned hosted Linux validation installs the exact requirements and runs the
+  no-network `make check` gate on Python 3.10 and 3.12 without credentials.
+- A separate Python 3.12 job audits the resolved production dependency graph.
 
 When the required SDK or runtime is unavailable, use static checks and source review first, then verify on a machine that has the matching platform toolchain.
 
 ## Configuration and Secrets
 
-- Detected references to Twitter. Keep API keys, OAuth credentials, tokens, and account-specific values in local configuration only.
+- Keep bearer tokens and account-specific values in local configuration only.
 - Never commit Twitter credentials, MongoDB URLs, captured posts, or local `.env`
   files.
 
@@ -118,6 +125,8 @@ When the required SDK or runtime is unavailable, use static checks and source re
 - Non-string raw stream payloads should not terminate the streaming worker.
 - Explicit MongoDB client injection should stay reliable for fake clients used
   in no-network tests.
+- Tagged API v2 rule replacement must never delete another worker's rules.
+- Stream payloads without a matching expanded author must not be stored.
 
 ## Maintenance Notes
 
@@ -128,6 +137,8 @@ When the required SDK or runtime is unavailable, use static checks and source re
   the current worker baseline.
 - See `docs/plans/2026-06-10-hosted-no-network-validation.md` for the hosted
   Linux no-network test contract.
+- See `docs/plans/2026-06-12-modern-stream-dependencies.md` for the API v2,
+  bearer-token, tagged-rule, PyMongo, and dependency-audit migration.
 - See `SECURITY.md` for vulnerability reporting and safe research guidance.
 - See `VISION.md` for project direction and contribution guardrails.
 

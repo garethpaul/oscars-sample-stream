@@ -12,9 +12,11 @@ ROOT = Path(__file__).resolve().parents[1]
 PLAN = "docs/plans/2026-06-08-oscars-stream-baseline.md"
 HOSTED_VALIDATION_PLAN = "docs/plans/2026-06-10-hosted-no-network-validation.md"
 RATE_LIMIT_DISCONNECT_PLAN = "docs/plans/2026-06-12-stream-rate-limit-disconnect.md"
+MODERN_DEPENDENCIES_PLAN = "docs/plans/2026-06-12-modern-stream-dependencies.md"
 REQUIRED = [
     ".github/workflows/check.yml",
     ".gitignore",
+    "AGENTS.md",
     "CHANGES.md",
     "Makefile",
     "Procfile",
@@ -36,7 +38,9 @@ REQUIRED = [
     "docs/plans/2026-06-10-bounded-track-term-preflight.md",
     HOSTED_VALIDATION_PLAN,
     RATE_LIMIT_DISCONNECT_PLAN,
+    MODERN_DEPENDENCIES_PLAN,
     "requirements.txt",
+    "requirements.lock",
     "sample_stream.py",
     "scripts/check-baseline.py",
     "test_sample_stream.py",
@@ -70,26 +74,32 @@ def main():
     config = read("config.py")
     if "ENV[" in config:
         failures.append("config.py must use os.environ instead of undefined ENV")
-    for phrase in ["required_env", "consumer_key", "CONSUMER_KEY", "MONGOHQ_URL", "MONGO_URL", "value.strip()"]:
+    for phrase in ["required_env", "bearer_token", "BEARER_TOKEN", "MONGOHQ_URL", "MONGO_URL", "value.strip()"]:
         if phrase not in config:
             failures.append(f"config.py must include {phrase}")
 
     stream = read("sample_stream.py")
     for phrase in [
         "TRACK_TERMS = [\"#oscars\"]",
-        "def create_api",
         "def create_stream",
         "def start_stream",
         "def clean_required_text",
         "def clean_track_terms",
+        "def stream_rule_value",
+        "def sync_stream_rule",
+        "def expanded_username",
+        "class OscarsStream(tweepy.StreamingClient)",
         "MAX_TRACK_TERMS = 100",
+        "MAX_RULE_LENGTH = 512",
+        'RULE_TAG = "oscars-sample-stream"',
         "cleaned_track_terms = clean_track_terms(track_terms)",
         "track_terms must not include more than 100 values",
+        "track_terms produce a stream rule larger than 512 bytes",
         "isinstance(track_terms, str)",
-        "streaming_api.filter",
+        'stream.filter(expansions=["author_id"], user_fields=["username"])',
         "if __name__ == \"__main__\"",
-        "isinstance(data, dict)",
-        "isinstance(user, dict)",
+        "isinstance(payload, dict)",
+        "isinstance(tweet, dict)",
         "value.strip()",
         "datetime.timezone.utc",
         "track_terms must include at least one non-empty string",
@@ -98,37 +108,39 @@ def main():
         "except TypeError",
         "except (TypeError, ValueError)",
         "mongo_client is not None",
-        "if status_code == 420",
-        "return False",
+        "config.mongo_url()",
+        "config.bearer_token()",
+        "self.db.tweets.insert_one",
+        "if status_code in (420, 429)",
+        "self.disconnect()",
+        "tweepy.StreamRule(value=rule_value, tag=RULE_TAG)",
+        "stream.delete_rules(existing_ids)",
     ]:
         if phrase not in stream:
             failures.append(f"sample_stream.py must include {phrase}")
     if "straming_api" in stream:
         failures.append("sample_stream.py must not contain the stream startup typo")
+    for retired in ["OAuthHandler", "StreamListener", "tweepy.streaming.Stream", ".tweets.insert("]:
+        if retired in stream:
+            failures.append(f"sample_stream.py must not restore retired API {retired}")
 
     tests = read("test_sample_stream.py")
     for phrase in [
-        "FakeOAuthHandler",
+        "FakeStreamingClient",
+        "FakeStreamRule",
         "FakeMongoClient",
-        "test_config_ignores_blank_env_values_and_uses_fallback",
-        "test_start_stream_filters_for_oscars",
-        "bad user",
-        "bad name",
-        "text\":123",
-        "listener.on_data(None)",
-        "[]",
+        "test_config_ignores_blank_bearer_token_and_uses_fallback",
+        "test_start_stream_configures_tagged_oscars_rule",
+        "test_start_stream_replaces_only_worker_tagged_rules",
+        "test_rule_terms_are_literal_and_bounded",
         "test_start_stream_accepts_single_custom_track_term",
-        "test_start_stream_trims_custom_track_terms",
-        "test_start_stream_rejects_empty_custom_track_terms",
-        "test_start_stream_rejects_non_iterable_custom_track_terms",
-        "test_start_stream_rejects_mapping_custom_track_terms",
+        "test_start_stream_rejects_invalid_track_terms_before_client_setup",
         "UserDict",
         "FalsyMongoClient",
-        "test_listener_uses_explicit_falsy_mongo_client",
-        "test_listener_disconnects_on_stream_rate_limit",
-        "test_listener_continues_on_other_stream_errors",
-        "test_listener_continues_after_timeout",
-        "test_start_stream_validates_track_terms_before_client_setup",
+        "test_stream_uses_explicit_falsy_mongo_client",
+        "test_stream_disconnects_on_rate_limits_only",
+        "test_stream_inserts_minimal_v2_tweet_document",
+        "test_stream_ignores_malformed_or_incomplete_v2_payloads",
         "test_start_stream_rejects_more_than_one_hundred_track_terms",
     ]:
         if phrase not in tests:
@@ -157,9 +169,32 @@ def main():
         'python-version: ["3.10", "3.12"]',
         "PYTHONDONTWRITEBYTECODE: \"1\"",
         "run: make check",
+        "dependency-audit:",
+        "pip-audit==2.10.0",
+        "pip-audit -r requirements.lock",
+        "python -m pip install --disable-pip-version-check -r requirements.lock",
     ]:
         if expected not in workflow:
             failures.append(f"Check workflow must keep {expected}")
+    if workflow.count("persist-credentials: false") != 2:
+        failures.append("Check workflow must disable persisted credentials for both jobs")
+
+    requirements = read("requirements.txt")
+    if requirements != "pymongo==4.17.0\ntweepy==4.16.0\n":
+        failures.append("requirements.txt must keep exact maintained Tweepy and PyMongo pins")
+    expected_lock = """certifi==2026.5.20
+charset-normalizer==3.4.7
+dnspython==2.8.0
+idna==3.18
+oauthlib==3.3.1
+pymongo==4.17.0
+requests==2.34.2
+requests-oauthlib==2.0.0
+tweepy==4.16.0
+urllib3==2.7.0
+"""
+    if read("requirements.lock") != expected_lock:
+        failures.append("requirements.lock must keep the exact audited production graph")
 
     gitignore = read(".gitignore")
     for phrase in [".env", ".env.*", "__pycache__/", "*.log", "tmp/"]:
@@ -180,6 +215,7 @@ def main():
         "#oscars",
         "no-network tests",
         "Twitter credentials",
+        "bearer token",
         "required stream fields",
         "blank environment values",
         "custom stream filters",
@@ -194,6 +230,10 @@ def main():
         "bounded track term preflight",
         "stream rate-limit",
         "hosted Linux",
+        "StreamingClient",
+        "insert_one",
+        "oscars-sample-stream",
+        "dependency audit",
     ]:
         if phrase.lower() not in docs.lower():
             failures.append(f"docs must mention {phrase}")
@@ -268,6 +308,29 @@ def main():
     ]:
         if evidence not in disconnect_verification:
             failures.append(f"stream rate-limit disconnect verification must record {evidence}")
+
+    modern_plan = read(MODERN_DEPENDENCIES_PLAN)
+    modern_status = re.findall(r"(?mi)^status:\s*(.+?)\s*$", modern_plan)
+    modern_work = markdown_section(modern_plan, "Work Completed")
+    modern_verification = markdown_section(modern_plan, "Verification Completed")
+    if modern_status != ["completed"] or not modern_work:
+        failures.append("modern dependency plan must record one completed status and completed work")
+    if not modern_verification or re.search(
+        r"(?i)\b(?:pending|todo|tbd|not run)\b", modern_verification
+    ):
+        failures.append("modern dependency plan must record completed verification")
+    for evidence in [
+        "Tweepy 4.16.0",
+        "PyMongo 4.17.0",
+        "pip-audit -r requirements.lock",
+        "no known vulnerabilities",
+        "11 no-network tests",
+        "oscars-sample-stream",
+        "insert_one",
+        "420/429 disconnects",
+    ]:
+        if evidence not in modern_verification and evidence not in modern_work:
+            failures.append(f"modern dependency plan must record {evidence}")
 
     try:
         ET.parse(ROOT / "docs/readme-overview.svg")

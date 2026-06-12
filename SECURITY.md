@@ -28,8 +28,8 @@ Helpful reports include:
 - Review found authentication, token, or session-related code paths; changes in those areas should receive security-focused review before merge.
 - Review found file, document, data, or media parsing flows; changes in those areas should receive security-focused review before merge.
 - Dependency manifests detected: requirements.txt. Dependency updates should preserve lockfiles when present and avoid introducing packages without a clear maintenance reason.
-- Twitter credentials and MongoDB URLs must come from environment variables
-  such as `consumer_key`, `access_key`, and `MONGOHQ_URL`; do not commit local
+- Twitter/X bearer tokens and MongoDB URLs must come from environment variables
+  such as `BEARER_TOKEN` and `MONGOHQ_URL`; do not commit local
   `.env` files or captured stream payloads.
 
 ## Service and API Notes
@@ -41,8 +41,9 @@ and error handling around malformed payloads. Run `make check` before changing
 credential handling or stream startup.
 Use `make lint`, `make build`, and `make verify` as the stable local aliases
 for static verification and the full no-network gate.
-Required stream fields should be strings with meaningful content after
-whitespace trimming before they are written to MongoDB.
+Required API v2 tweet text and expanded usernames should be strings with
+meaningful content after whitespace trimming before they are written to
+MongoDB with `insert_one`.
 Blank environment values should be ignored rather than treated as configured
 credentials or MongoDB URLs.
 Custom stream filters should include at least one non-empty string after
@@ -61,8 +62,14 @@ Legacy stream rate-limit status `420` should disconnect instead of entering a
 reconnect loop that escalates upstream backoff.
 Python bytecode is local tooling output and should not remain after no-network
 verification gates.
-Pinned, read-only hosted Linux validation runs the fake-client baseline on two
-Python versions without credentials, live Twitter calls, or MongoDB access.
+Persistent API v2 rules are project-wide state. The worker may replace only
+rules tagged `oscars-sample-stream`; broad deletion could disrupt unrelated
+stream consumers. Rule expressions are bounded to 512 UTF-8 bytes before
+client setup.
+Pinned, read-only hosted Linux validation installs Tweepy 4.16.0 and PyMongo
+4.17.0, then runs the fake-client baseline on two Python versions without
+credentials, live Twitter calls, or MongoDB access. A separate pinned
+dependency audit checks the exact resolved `requirements.lock` graph.
 
 ## Dependency and Supply Chain Security
 

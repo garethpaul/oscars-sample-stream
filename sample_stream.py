@@ -1,5 +1,6 @@
 import datetime
 import json
+import re
 from collections.abc import Mapping
 
 import pymongo
@@ -10,6 +11,9 @@ import config
 
 TRACK_TERMS = ["#oscars"]
 MAX_TRACK_TERMS = 100
+MAX_RULE_LENGTH = 512
+RULE_TAG = "oscars-sample-stream"
+HASHTAG = re.compile(r"^#[A-Za-z0-9_]+$")
 
 
 def clean_required_text(value):
@@ -43,65 +47,95 @@ def clean_track_terms(track_terms):
     return cleaned
 
 
-def create_api():
-    auth = tweepy.OAuthHandler(config.consumer_key, config.consumer_secret)
-    auth.set_access_token(config.access_key, config.access_secret)
-    return tweepy.API(auth)
+def stream_rule_value(track_terms):
+    terms = []
+    for term in track_terms:
+        if HASHTAG.fullmatch(term):
+            terms.append(term)
+        else:
+            escaped = term.replace("\\", "\\\\").replace('"', '\\"')
+            terms.append('"{}"'.format(escaped))
+    value = " OR ".join(terms)
+    if len(value.encode("utf-8")) > MAX_RULE_LENGTH:
+        raise ValueError("track_terms produce a stream rule larger than 512 bytes")
+    return value
 
 
-class CustomStreamListener(tweepy.StreamListener):
-    def __init__(self, api, mongo_client=None):
-        self.api = api
-        super(CustomStreamListener, self).__init__()
+def tagged_rule_ids(rules):
+    return [rule.id for rule in rules or [] if rule.tag == RULE_TAG]
+
+
+def sync_stream_rule(stream, rule_value):
+    current = stream.get_rules().data or []
+    existing_ids = tagged_rule_ids(current)
+    stream.add_rules(tweepy.StreamRule(value=rule_value, tag=RULE_TAG))
+    if existing_ids:
+        stream.delete_rules(existing_ids)
+
+
+def expanded_username(payload, author_id):
+    includes = payload.get("includes") or {}
+    if not isinstance(includes, dict):
+        return None
+    users = includes.get("users") or []
+    if not isinstance(users, list):
+        return None
+    for user in users:
+        if not isinstance(user, dict) or user.get("id") != author_id:
+            continue
+        return clean_required_text(user.get("username"))
+    return None
+
+
+class OscarsStream(tweepy.StreamingClient):
+    def __init__(self, bearer_token, mongo_client=None):
+        super().__init__(bearer_token, wait_on_rate_limit=False, max_retries=3)
         client = (
             mongo_client
             if mongo_client is not None
-            else pymongo.MongoClient(config.mongo_url)
+            else pymongo.MongoClient(config.mongo_url())
         )
         self.db = client.TweetDB
 
-    def on_data(self, tweet):
+    def on_data(self, raw_data):
         try:
-            data = json.loads(tweet)
+            payload = json.loads(raw_data)
         except (TypeError, ValueError):
-            return True
-        if not isinstance(data, dict):
-            return True
+            return
+        if not isinstance(payload, dict):
+            return
 
-        user = data.get("user") or {}
-        if not isinstance(user, dict):
-            return True
-        text = clean_required_text(data.get("text"))
-        screen_name = clean_required_text(user.get("screen_name"))
-        if not text or not screen_name:
-            return True
+        tweet = payload.get("data") or {}
+        if not isinstance(tweet, dict):
+            return
+        text = clean_required_text(tweet.get("text"))
+        author_id = clean_required_text(tweet.get("author_id"))
+        username = expanded_username(payload, author_id)
+        if not text or not author_id or not username:
+            return
 
-        self.db.tweets.insert({
+        self.db.tweets.insert_one({
             "text": text,
             "date": datetime.datetime.now(datetime.timezone.utc),
-            "screen_name": screen_name,
+            "screen_name": username,
         })
-        return True
 
-    def on_error(self, status_code):
-        if status_code == 420:
-            return False
-        return True  # Don't kill the stream
-
-    def on_timeout(self):
-        return True  # Don't kill the stream
+    def on_request_error(self, status_code):
+        if status_code in (420, 429):
+            self.disconnect()
 
 
-def create_stream(api):
-    return tweepy.streaming.Stream(api.auth, CustomStreamListener(api))
+def create_stream(mongo_client=None):
+    return OscarsStream(config.bearer_token(), mongo_client=mongo_client)
 
 
-def start_stream(track_terms=None):
+def start_stream(track_terms=None, mongo_client=None):
     cleaned_track_terms = clean_track_terms(track_terms)
-    api = create_api()
-    streaming_api = create_stream(api)
-    streaming_api.filter(track=cleaned_track_terms)
-    return streaming_api
+    rule_value = stream_rule_value(cleaned_track_terms)
+    stream = create_stream(mongo_client=mongo_client)
+    sync_stream_rule(stream, rule_value)
+    stream.filter(expansions=["author_id"], user_fields=["username"])
+    return stream
 
 
 if __name__ == "__main__":

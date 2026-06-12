@@ -2,6 +2,11 @@
 
 ## 2026-06-12
 
+- Replaced vulnerable Tweepy 2.2 and PyMongo 2.6.3 pins with exact maintained
+  Tweepy 4.16.0 and PyMongo 4.17.0 releases.
+- Migrated the retired Twitter API v1.1 listener to a bearer-token API v2
+  `StreamingClient` with bounded, tagged rule replacement and author expansion.
+- Moved MongoDB writes to `insert_one` and added a resolved dependency audit.
 - Made legacy Twitter stream error `420` disconnect the listener while
   preserving continuation for other errors and timeouts.
 - Added no-network listener decision tests.

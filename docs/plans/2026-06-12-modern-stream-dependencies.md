@@ -1,6 +1,6 @@
 # Modern Stream Dependencies
 
-status: planned
+status: completed
 
 ## Context
 
@@ -25,7 +25,8 @@ injection, and rate-limit disconnect behavior.
 
 ## Requirements
 
-- R1. Pin Tweepy 4.16.0 and PyMongo 4.17.0 exactly; both releases must install
+- R1. Pin Tweepy 4.16.0 and PyMongo 4.17.0 exactly, lock the resolved
+  production graph; both releases must install
   on the hosted Python 3.10 and 3.12 matrix and report zero known
   vulnerabilities through a pinned dependency-audit job.
 - R2. Replace OAuth 1.0a stream construction with a required bearer-token
@@ -65,3 +66,34 @@ injection, and rate-limit disconnect behavior.
   deletion, missing author expansion, legacy insert, and audit removal
 - `git diff --check`
 - successful exact-head push, pull-request, dependency-audit, and CodeQL runs
+
+## Work Completed
+
+- Pinned Tweepy 4.16.0 and PyMongo 4.17.0, locked the ten-package production
+  graph, and replaced the removed listener and collection insertion interfaces.
+- Added bearer-token API v2 streaming, bounded literal rule generation, and
+  replacement limited to rules tagged `oscars-sample-stream`.
+- Required expanded author identity before normalized text and username are
+  written through `insert_one`.
+- Preserved validation-before-setup, explicit falsy Mongo client injection,
+  lazy credential resolution, and rate-limit disconnects for statuses 420 and
+  429.
+- Added exact dependency installation and a pinned resolved audit to hosted
+  validation, plus repository guidance for the new boundary.
+
+## Verification Completed
+
+- The isolated exact install reported Tweepy 4.16.0 and PyMongo 4.17.0 with
+  Python `>=3.9` metadata.
+- `pip-audit -r requirements.lock` reported no known vulnerabilities for the
+  resolved production graph.
+- `python3 -m unittest -v test_sample_stream.py` passed 11 no-network tests for
+  tagged rules, literal and byte-bounded filters, author expansion, malformed
+  payloads, `insert_one`, explicit falsy clients, and 420/429 disconnects.
+- `make lint`, `make test`, `make build`, `make check`, Python compilation,
+  workflow parsing, and `git diff --check` passed in the isolated Python 3.12
+  environment.
+- Eleven isolated hostile mutations were rejected, covering dependency
+  downgrades, retired APIs, credential bypass, broad rule deletion, missing
+  author expansion, lock drift, audit removal, incomplete evidence, and unsafe
+  delete-before-add rule replacement.

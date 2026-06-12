@@ -10,14 +10,14 @@ The repository is useful as a compact example of wiring environment-based
 credentials, a streaming API client, and a hosted MongoDB add-on into a simple
 Python worker.
 
-The goal is to preserve the learning value while making the legacy API,
-dependency, and deployment assumptions obvious.
+The goal is to preserve the learning value on maintained Python, Twitter/X API
+v2, and MongoDB client interfaces while keeping deployment assumptions obvious.
 
 Current baseline: `make check` runs no-network tests with fake Tweepy and
-MongoDB clients and verifies the `#oscars` stream filter, environment-variable
-configuration, and static docs. `make lint`, `make build`, and `make verify`
-are stable aliases for static verification, build-through-static-check, and
-full verification.
+MongoDB clients and verifies the `#oscars` API v2 tagged rule,
+environment-variable configuration, author expansion, rate-limit disconnect,
+and static docs. `make lint`, `make build`, and `make verify` are stable aliases
+for static verification, build-through-static-check, and full verification.
 
 The current focus is:
 
@@ -26,7 +26,7 @@ Priority:
 - Preserve the Heroku worker shape and configuration flow
 - Keep credentials outside source files
 - Document the expected stream filter and MongoDB collection behavior
-- Treat the current Python and API dependencies as legacy
+- Keep Tweepy 4.16.0 and PyMongo 4.17.0 exact and audited
 - Keep no-network tests available for stream startup and payload handling
 - Treat malformed, non-object, and incomplete stream payloads as ignorable
   worker input
@@ -38,7 +38,9 @@ Priority:
 - Keep bounded track term preflight ahead of API and listener setup
 - Keep non-string raw stream payloads non-fatal
 - Keep explicit MongoDB client injection reliable for no-network tests
-- Keep legacy stream rate-limit errors from reconnecting indefinitely
+- Keep API v2 stream rate-limit errors from reconnecting indefinitely
+- Keep rule replacement scoped to the `oscars-sample-stream` tag
+- Require expanded author identity before MongoDB storage through `insert_one`
 - Keep verification targets from leaving Python bytecode behind
 - Keep Python 3.10 and 3.12 hosted Linux validation credential-free and
   no-network
@@ -50,7 +52,8 @@ Next priorities:
 - Move configuration examples into environment-variable documentation
 - Document retention and cleanup expectations for stored stream fields
 - Keep fake-client injection covered before changing MongoDB setup
-- Update dependencies only after documenting API compatibility changes
+- Exercise a credentialed API v2 and MongoDB smoke path in an isolated test
+  project before production use
 
 Contribution rules:
 
@@ -76,6 +79,7 @@ real captured payloads in the repository.
 - Broad data collection defaults
 - Silent storage of full payloads without documentation
 - Dependency upgrades that hide streaming API behavior changes
+- Broad deletion of persistent API v2 stream rules
 
 This list is a roadmap guardrail, not a permanent rule.
 Strong user demand and strong technical rationale can change it.

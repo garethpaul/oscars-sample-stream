@@ -38,6 +38,7 @@ Priority:
 - Keep bounded track term preflight ahead of API and listener setup
 - Keep non-string raw stream payloads non-fatal
 - Keep explicit MongoDB client injection reliable for no-network tests
+- Keep legacy stream rate-limit errors from reconnecting indefinitely
 - Keep verification targets from leaving Python bytecode behind
 - Keep Python 3.10 and 3.12 hosted Linux validation credential-free and
   no-network

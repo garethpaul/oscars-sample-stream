@@ -57,6 +57,8 @@ Non-string raw stream payloads should be ignored like malformed JSON rather
 than terminating the worker.
 Explicit MongoDB client injection should be honored in no-network tests so fake
 clients cannot fall through to configured MongoDB URLs.
+Legacy stream rate-limit status `420` should disconnect instead of entering a
+reconnect loop that escalates upstream backoff.
 Python bytecode is local tooling output and should not remain after no-network
 verification gates.
 Pinned, read-only hosted Linux validation runs the fake-client baseline on two

@@ -84,6 +84,8 @@ class CustomStreamListener(tweepy.StreamListener):
         return True
 
     def on_error(self, status_code):
+        if status_code == 420:
+            return False
         return True  # Don't kill the stream
 
     def on_timeout(self):

@@ -1,6 +1,6 @@
 # Stream Rate Limit Disconnect
 
-status: planned
+status: completed
 
 ## Context
 
@@ -35,9 +35,11 @@ Official behavior reference:
 ## Verification
 
 - `PYTHONDONTWRITEBYTECODE=1 python3 -m unittest -v test_sample_stream.py`
-- `make lint`
-- `make test`
-- `make build`
-- `make check`
-- A mutation restoring unconditional `True` from `on_error` is rejected.
-- `git diff --check`
+  passed with 15 tests on 2026-06-12.
+- `make lint` passed on 2026-06-12.
+- `make test` passed with 15 tests on 2026-06-12.
+- `make build` passed on 2026-06-12.
+- `make check` passed on 2026-06-12.
+- The focused rate-limit test rejected a mutation restoring `True` for status
+  `420` on 2026-06-12.
+- `git diff --check` passed on 2026-06-12.

@@ -195,6 +195,27 @@ class SampleStreamTest(unittest.TestCase):
 
         self.assertIs(client.TweetDB, listener.db)
 
+    def test_listener_disconnects_on_stream_rate_limit(self):
+        sample_stream = load_sample_stream()
+        client = FakeMongoClient("mongodb://example.invalid/db")
+        listener = sample_stream.CustomStreamListener(api=object(), mongo_client=client)
+
+        self.assertFalse(listener.on_error(420))
+
+    def test_listener_continues_on_other_stream_errors(self):
+        sample_stream = load_sample_stream()
+        client = FakeMongoClient("mongodb://example.invalid/db")
+        listener = sample_stream.CustomStreamListener(api=object(), mongo_client=client)
+
+        self.assertTrue(listener.on_error(500))
+
+    def test_listener_continues_after_timeout(self):
+        sample_stream = load_sample_stream()
+        client = FakeMongoClient("mongodb://example.invalid/db")
+        listener = sample_stream.CustomStreamListener(api=object(), mongo_client=client)
+
+        self.assertTrue(listener.on_timeout())
+
     def test_listener_ignores_malformed_or_incomplete_payloads(self):
         sample_stream = load_sample_stream()
         client = FakeMongoClient("mongodb://example.invalid/db")

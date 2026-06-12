@@ -72,6 +72,9 @@ The setup commands above are derived from repository files. Legacy mobile, Pytho
   falling back to a configured MongoDB URL when a fake client is falsy.
 - Required stream fields are normalized before storage: `text` and
   `screen_name` must be non-empty strings after trimming whitespace.
+- Legacy Twitter streaming status `420` disconnects the listener instead of
+  repeatedly reconnecting while rate limited; other errors and timeouts keep
+  the existing continuation behavior.
 - Local verification runs with Python bytecode writes disabled so no
   `__pycache__` output remains after the no-network gates.
 

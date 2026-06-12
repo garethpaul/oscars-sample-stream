@@ -10,6 +10,7 @@ import xml.etree.ElementTree as ET
 ROOT = Path(__file__).resolve().parents[1]
 PLAN = "docs/plans/2026-06-08-oscars-stream-baseline.md"
 HOSTED_VALIDATION_PLAN = "docs/plans/2026-06-10-hosted-no-network-validation.md"
+RATE_LIMIT_DISCONNECT_PLAN = "docs/plans/2026-06-12-stream-rate-limit-disconnect.md"
 REQUIRED = [
     ".github/workflows/check.yml",
     ".gitignore",
@@ -33,6 +34,7 @@ REQUIRED = [
     "docs/plans/2026-06-10-explicit-mongo-client-injection.md",
     "docs/plans/2026-06-10-bounded-track-term-preflight.md",
     HOSTED_VALIDATION_PLAN,
+    RATE_LIMIT_DISCONNECT_PLAN,
     "requirements.txt",
     "sample_stream.py",
     "scripts/check-baseline.py",
@@ -87,6 +89,8 @@ def main():
         "except TypeError",
         "except (TypeError, ValueError)",
         "mongo_client is not None",
+        "if status_code == 420",
+        "return False",
     ]:
         if phrase not in stream:
             failures.append(f"sample_stream.py must include {phrase}")
@@ -112,6 +116,9 @@ def main():
         "UserDict",
         "FalsyMongoClient",
         "test_listener_uses_explicit_falsy_mongo_client",
+        "test_listener_disconnects_on_stream_rate_limit",
+        "test_listener_continues_on_other_stream_errors",
+        "test_listener_continues_after_timeout",
         "test_start_stream_validates_track_terms_before_client_setup",
         "test_start_stream_rejects_more_than_one_hundred_track_terms",
     ]:
@@ -176,6 +183,7 @@ def main():
         "Python bytecode",
         "explicit MongoDB client injection",
         "bounded track term preflight",
+        "stream rate-limit",
         "hosted Linux",
     ]:
         if phrase.lower() not in docs.lower():
@@ -221,6 +229,13 @@ def main():
     hosted_validation_plan = read(HOSTED_VALIDATION_PLAN)
     if "status: completed" not in hosted_validation_plan or "make check" not in hosted_validation_plan:
         failures.append("hosted no-network validation plan must record completed status and verification")
+    rate_limit_disconnect_plan = read(RATE_LIMIT_DISCONNECT_PLAN)
+    if (
+        "status: completed" not in rate_limit_disconnect_plan
+        or "status `420`" not in rate_limit_disconnect_plan
+        or "make check" not in rate_limit_disconnect_plan
+    ):
+        failures.append("stream rate-limit disconnect plan must record completed status and verification")
 
     try:
         ET.parse(ROOT / "docs/readme-overview.svg")

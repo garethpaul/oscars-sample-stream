@@ -1,5 +1,11 @@
 # Changes
 
+## 2026-06-12
+
+- Made legacy Twitter stream error `420` disconnect the listener while
+  preserving continuation for other errors and timeouts.
+- Added no-network listener decision tests.
+
 ## 2026-06-09
 
 - Added stable `make lint`, `make build`, and `make verify` aliases around the

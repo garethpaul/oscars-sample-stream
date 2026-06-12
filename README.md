@@ -82,6 +82,9 @@ The setup commands above are derived from repository files. Legacy mobile, Pytho
 - `python3 -m unittest discover -v`
 - `python3 scripts/check-baseline.py`
 
+GitHub Actions runs the same no-network `make check` baseline on pushes and
+pull requests without requiring Twitter credentials or a MongoDB service.
+
 When the required SDK or runtime is unavailable, use static checks and source review first, then verify on a machine that has the matching platform toolchain.
 
 ## Configuration and Secrets
@@ -119,6 +122,7 @@ When the required SDK or runtime is unavailable, use static checks and source re
   `#oscars` filter.
 - See `CHANGES.md` and `docs/plans/2026-06-08-oscars-stream-baseline.md` for
   the current worker baseline.
+- See `docs/plans/2026-06-10-ci-baseline.md` for the GitHub Actions baseline.
 - See `SECURITY.md` for vulnerability reporting and safe research guidance.
 - See `VISION.md` for project direction and contribution guardrails.
 

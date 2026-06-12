@@ -9,7 +9,9 @@ import xml.etree.ElementTree as ET
 
 ROOT = Path(__file__).resolve().parents[1]
 PLAN = "docs/plans/2026-06-08-oscars-stream-baseline.md"
+CI_PLAN = "docs/plans/2026-06-10-ci-baseline.md"
 REQUIRED = [
+    ".github/workflows/check.yml",
     ".gitignore",
     "CHANGES.md",
     "Makefile",
@@ -29,6 +31,7 @@ REQUIRED = [
     "docs/plans/2026-06-09-make-gate-aliases.md",
     "docs/plans/2026-06-09-bytecode-free-verification.md",
     "docs/plans/2026-06-10-explicit-mongo-client-injection.md",
+    CI_PLAN,
     "requirements.txt",
     "sample_stream.py",
     "scripts/check-baseline.py",
@@ -121,6 +124,15 @@ def main():
         if phrase not in makefile:
             failures.append(f"Makefile must include {phrase}")
 
+    workflow = read(".github/workflows/check.yml")
+    for phrase in [
+        "actions/setup-python@v5",
+        'python-version: "3.12"',
+        "make check",
+    ]:
+        if phrase not in workflow:
+            failures.append(f"GitHub Actions workflow must include {phrase}")
+
     gitignore = read(".gitignore")
     for phrase in [".env", ".env.*", "__pycache__/", "*.log", "tmp/"]:
         if phrase not in gitignore:
@@ -151,6 +163,7 @@ def main():
         "make verify",
         "Python bytecode",
         "explicit MongoDB client injection",
+        "GitHub Actions",
     ]:
         if phrase.lower() not in docs.lower():
             failures.append(f"docs must mention {phrase}")
@@ -189,6 +202,9 @@ def main():
         or "explicit MongoDB client injection" not in mongo_client_plan
     ):
         failures.append("explicit MongoDB client injection plan must record completed status and verification")
+    ci_plan = read(CI_PLAN)
+    if "status: completed" not in ci_plan or "GitHub Actions" not in ci_plan or "make check" not in ci_plan:
+        failures.append("CI baseline plan must record completed status and make check verification")
 
     try:
         ET.parse(ROOT / "docs/readme-overview.svg")

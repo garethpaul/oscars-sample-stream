@@ -17,7 +17,8 @@ Current baseline: `make check` runs no-network tests with fake Tweepy and
 MongoDB clients and verifies the `#oscars` stream filter, environment-variable
 configuration, and static docs. `make lint`, `make build`, and `make verify`
 are stable aliases for static verification, build-through-static-check, and
-full verification.
+full verification. GitHub Actions runs the same no-network baseline on pushes
+and pull requests.
 
 The current focus is:
 
@@ -38,6 +39,7 @@ Priority:
 - Keep non-string raw stream payloads non-fatal
 - Keep explicit MongoDB client injection reliable for no-network tests
 - Keep verification targets from leaving Python bytecode behind
+- Keep GitHub Actions aligned with the no-network `make check` gate
 
 Next priorities:
 

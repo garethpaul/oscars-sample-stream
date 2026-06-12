@@ -9,6 +9,8 @@
 
 ## 2026-06-10
 
+- Added a GitHub Actions workflow that runs the no-network `make check`
+  baseline for pushes and pull requests.
 - Honored explicit MongoDB client injection even when a fake no-network client
   is falsy.
 

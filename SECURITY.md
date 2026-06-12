@@ -57,6 +57,9 @@ Explicit MongoDB client injection should be honored in no-network tests so fake
 clients cannot fall through to configured MongoDB URLs.
 Python bytecode is local tooling output and should not remain after no-network
 verification gates.
+GitHub Actions runs the same no-network `make check` baseline and must not be
+extended with live Twitter, MongoDB, or credentialed deployment steps without a
+separate review.
 
 ## Dependency and Supply Chain Security
 

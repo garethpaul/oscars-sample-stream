@@ -3,6 +3,7 @@
 
 from pathlib import Path
 import ast
+import hashlib
 import re
 import sys
 import xml.etree.ElementTree as ET
@@ -13,6 +14,9 @@ PLAN = "docs/plans/2026-06-08-oscars-stream-baseline.md"
 HOSTED_VALIDATION_PLAN = "docs/plans/2026-06-10-hosted-no-network-validation.md"
 RATE_LIMIT_DISCONNECT_PLAN = "docs/plans/2026-06-12-stream-rate-limit-disconnect.md"
 MODERN_DEPENDENCIES_PLAN = "docs/plans/2026-06-12-modern-stream-dependencies.md"
+HASH_LOCK_PLAN = "docs/plans/2026-06-12-hash-locked-dependency-installs.md"
+PRODUCTION_LOCK_SHA256 = "27ea76d7d0f7efea504ebcee475e411502bc775dceab3e10501563085d77ce1c"
+AUDIT_LOCK_SHA256 = "fc7ce7c6f13eee2008ea150facb1560903d6d12f4d6ad5245e68fdc3a75e607b"
 REQUIRED = [
     ".github/workflows/check.yml",
     ".gitignore",
@@ -39,6 +43,9 @@ REQUIRED = [
     HOSTED_VALIDATION_PLAN,
     RATE_LIMIT_DISCONNECT_PLAN,
     MODERN_DEPENDENCIES_PLAN,
+    HASH_LOCK_PLAN,
+    "requirements-audit.in",
+    "requirements-audit.lock",
     "requirements.txt",
     "requirements.lock",
     "sample_stream.py",
@@ -57,6 +64,20 @@ def markdown_section(text, heading):
         text,
     )
     return match.group(1).strip() if match else ""
+
+
+def hashed_lock_inventory(text):
+    entries = {}
+    for match in re.finditer(
+        r"(?ms)^([A-Za-z0-9_.-]+)==([^\s\\]+)(.*?)(?=^[A-Za-z0-9_.-]+==|\Z)",
+        text,
+    ):
+        name = match.group(1).lower().replace("_", "-")
+        hashes = re.findall(r"--hash=sha256:([0-9a-f]{64})", match.group(3))
+        if name in entries:
+            return {}
+        entries[name] = (match.group(2), hashes)
+    return entries
 
 
 def main():
@@ -162,6 +183,10 @@ def main():
             failures.append(f"Makefile must include {phrase}")
 
     workflow = read(".github/workflows/check.yml")
+    workflow_files = [
+        *sorted((ROOT / ".github/workflows").glob("*.yml")),
+        *sorted((ROOT / ".github/workflows").glob("*.yaml")),
+    ]
     for expected in [
         "permissions:\n  contents: read",
         "cancel-in-progress: true",
@@ -173,31 +198,65 @@ def main():
         "PYTHONDONTWRITEBYTECODE: \"1\"",
         "run: make check",
         "dependency-audit:",
-        "pip-audit==2.10.0",
-        "pip-audit -r requirements.lock",
-        "python -m pip install --disable-pip-version-check -r requirements.lock",
+        "python -m pip install --disable-pip-version-check --require-hashes -r requirements.lock",
+        "python -m pip install --disable-pip-version-check --require-hashes -r requirements-audit.lock",
+        "python -m pip_audit --require-hashes --no-deps -r requirements.lock",
     ]:
         if expected not in workflow:
             failures.append(f"Check workflow must keep {expected}")
     if workflow.count("persist-credentials: false") != 2:
         failures.append("Check workflow must disable persisted credentials for both jobs")
+    if len(workflow_files) != 1:
+        failures.append("repository must keep one canonical workflow")
 
     requirements = read("requirements.txt")
     if requirements != "pymongo==4.17.0\ntweepy==4.16.0\n":
         failures.append("requirements.txt must keep exact maintained Tweepy and PyMongo pins")
-    expected_lock = """certifi==2026.5.20
-charset-normalizer==3.4.7
-dnspython==2.8.0
-idna==3.18
-oauthlib==3.3.1
-pymongo==4.17.0
-requests==2.34.2
-requests-oauthlib==2.0.0
-tweepy==4.16.0
-urllib3==2.7.0
-"""
-    if read("requirements.lock") != expected_lock:
+    production_lock = read("requirements.lock")
+    production_inventory = hashed_lock_inventory(production_lock)
+    expected_production = {
+        "certifi": "2026.5.20",
+        "charset-normalizer": "3.4.7",
+        "dnspython": "2.8.0",
+        "idna": "3.18",
+        "oauthlib": "3.3.1",
+        "pymongo": "4.17.0",
+        "requests": "2.34.2",
+        "requests-oauthlib": "2.0.0",
+        "tweepy": "4.16.0",
+        "urllib3": "2.7.0",
+    }
+    if {name: entry[0] for name, entry in production_inventory.items()} != expected_production:
         failures.append("requirements.lock must keep the exact audited production graph")
+    if not production_inventory or any(not entry[1] for entry in production_inventory.values()):
+        failures.append("requirements.lock must hash every production package")
+    if hashlib.sha256(production_lock.encode()).hexdigest() != PRODUCTION_LOCK_SHA256:
+        failures.append("requirements.lock must keep the reviewed artifact hashes")
+
+    audit_input = read("requirements-audit.in")
+    if audit_input != "pip-audit==2.10.0\n":
+        failures.append("requirements-audit.in must keep the exact pip-audit pin")
+    audit_lock = read("requirements-audit.lock")
+    audit_inventory = hashed_lock_inventory(audit_lock)
+    expected_audit = {
+        "boolean-py": "5.0", "cachecontrol": "0.14.4", "certifi": "2026.5.20",
+        "charset-normalizer": "3.4.7", "cyclonedx-python-lib": "11.8.0",
+        "defusedxml": "0.7.1", "filelock": "3.29.1", "idna": "3.18",
+        "license-expression": "30.4.4", "markdown-it-py": "4.2.0",
+        "mdurl": "0.1.2", "msgpack": "1.1.2", "packageurl-python": "0.17.6",
+        "packaging": "26.2", "pip": "26.1.2", "pip-api": "0.0.34",
+        "pip-audit": "2.10.0", "pip-requirements-parser": "32.0.1",
+        "platformdirs": "4.10.0", "py-serializable": "2.1.0",
+        "pygments": "2.20.0", "pyparsing": "3.3.2", "requests": "2.34.2",
+        "rich": "15.0.0", "sortedcontainers": "2.4.0", "tomli": "2.4.1",
+        "tomli-w": "1.2.0", "typing-extensions": "4.15.0", "urllib3": "2.7.0",
+    }
+    if {name: entry[0] for name, entry in audit_inventory.items()} != expected_audit:
+        failures.append("requirements-audit.lock must keep the exact pip-audit tool graph")
+    if not audit_inventory or any(not entry[1] for entry in audit_inventory.values()):
+        failures.append("requirements-audit.lock must hash every audit package")
+    if hashlib.sha256(audit_lock.encode()).hexdigest() != AUDIT_LOCK_SHA256:
+        failures.append("requirements-audit.lock must keep the reviewed artifact hashes")
 
     gitignore = read(".gitignore")
     for phrase in [".env", ".env.*", "__pycache__/", "*.log", "tmp/"]:
@@ -237,6 +296,7 @@ urllib3==2.7.0
         "insert_one",
         "oscars-sample-stream",
         "dependency audit",
+        "hash-locked",
     ]:
         if phrase.lower() not in docs.lower():
             failures.append(f"docs must mention {phrase}")
@@ -338,6 +398,15 @@ urllib3==2.7.0
     ]:
         if evidence not in modern_verification and evidence not in modern_work:
             failures.append(f"modern dependency plan must record {evidence}")
+
+    hash_lock_plan = read(HASH_LOCK_PLAN)
+    hash_lock_status = re.findall(r"(?mi)^status:\s*(.+?)\s*$", hash_lock_plan)
+    hash_lock_work = markdown_section(hash_lock_plan, "Work Completed")
+    hash_lock_verification = markdown_section(hash_lock_plan, "Verification Completed")
+    if hash_lock_status != ["completed"] or not hash_lock_work:
+        failures.append("hash-lock plan must record one completed status and completed work")
+    if not hash_lock_verification or "make check" not in hash_lock_verification:
+        failures.append("hash-lock plan must record completed make check verification")
 
     try:
         ET.parse(ROOT / "docs/readme-overview.svg")

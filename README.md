@@ -7,7 +7,7 @@
 
 `garethpaul/oscars-sample-stream` is a Python project. Sample Streaming API for #oscars
 
-The maintained worker targets Python 3.9 or newer and uses the Twitter/X API
+The maintained worker targets Python 3.10 or newer and uses the Twitter/X API
 v2 filtered stream through Tweepy 4.16.0 `StreamingClient` plus PyMongo 4.17.0.
 
 ## Repository Contents
@@ -16,7 +16,8 @@ v2 filtered stream through Tweepy 4.16.0 `StreamingClient` plus PyMongo 4.17.0.
 - `Makefile` - local no-network verification entry point
 - `README.md` - project overview and local usage notes
 - `requirements.txt` - exact direct runtime dependency pins
-- `requirements.lock` - exact resolved production dependency graph
+- `requirements.lock` - exact hash-locked production dependency graph
+- `requirements-audit.lock` - exact hash-locked pip-audit tool graph
 - `Procfile`
 - `SECURITY.md` - security reporting and disclosure guidance
 - `config.py` - environment-variable configuration loader
@@ -38,7 +39,7 @@ Additional scan context:
 ### Prerequisites
 
 - Git
-- Python 3.9 or newer
+- Python 3.10 or newer
 
 ### Setup
 
@@ -47,10 +48,19 @@ git clone https://github.com/garethpaul/oscars-sample-stream.git
 cd oscars-sample-stream
 python3 -m venv .venv
 . .venv/bin/activate
-python -m pip install -r requirements.lock
+python -m pip install --require-hashes -r requirements.lock
 ```
 
-The exact dependency graph should also pass `pip-audit -r requirements.lock`.
+Keep audit tooling out of the worker environment. From a separate audit venv,
+install `requirements-audit.lock` with `--require-hashes`, then verify the
+production graph:
+
+```bash
+python3 -m venv .venv-audit
+. .venv-audit/bin/activate
+python -m pip install --require-hashes -r requirements-audit.lock
+python -m pip_audit --require-hashes --no-deps -r requirements.lock
+```
 
 ## Running or Using the Project
 
@@ -92,9 +102,10 @@ The exact dependency graph should also pass `pip-audit -r requirements.lock`.
 - `make verify`
 - `python3 -m unittest discover -v`
 - `python3 scripts/check-baseline.py`
-- Pinned hosted Linux validation installs the exact requirements and runs the
+- Pinned hosted Linux validation installs the exact hash-locked requirements and runs the
   no-network `make check` gate on Python 3.10 and 3.12 without credentials.
-- A separate Python 3.12 job audits the resolved production dependency graph.
+- A separate Python 3.12 job installs the hash-locked audit-tool graph and
+  audits the resolved production graph without dependency resolution.
 
 When the required SDK or runtime is unavailable, use static checks and source review first, then verify on a machine that has the matching platform toolchain.
 

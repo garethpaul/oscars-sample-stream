@@ -2,6 +2,10 @@
 
 ## 2026-06-12
 
+- Added SHA-256 artifact hashes for production and dependency-audit graphs,
+  required hash checking in hosted installs, and removed audit-time resolution.
+- Raised the maintained runtime floor to Python 3.10, matching the hosted
+  matrix and current audit tooling.
 - Replaced vulnerable Tweepy 2.2 and PyMongo 2.6.3 pins with exact maintained
   Tweepy 4.16.0 and PyMongo 4.17.0 releases.
 - Migrated the retired Twitter API v1.1 listener to a bearer-token API v2

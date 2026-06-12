@@ -66,10 +66,11 @@ Persistent API v2 rules are project-wide state. The worker may replace only
 rules tagged `oscars-sample-stream`; broad deletion could disrupt unrelated
 stream consumers. Rule expressions are bounded to 512 UTF-8 bytes before
 client setup.
-Pinned, read-only hosted Linux validation installs Tweepy 4.16.0 and PyMongo
+Pinned, read-only hosted Linux validation installs hash-locked Tweepy 4.16.0 and PyMongo
 4.17.0, then runs the fake-client baseline on two Python versions without
 credentials, live Twitter calls, or MongoDB access. A separate pinned
-dependency audit checks the exact resolved `requirements.lock` graph.
+dependency audit uses its own hash-locked tool graph and checks the exact
+resolved `requirements.lock` graph without dependency resolution.
 
 ## Dependency and Supply Chain Security
 

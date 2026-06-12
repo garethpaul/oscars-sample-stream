@@ -6,8 +6,8 @@ These instructions apply to the entire repository.
 
 ## Runtime
 
-- Use Python 3.9 or newer.
-- Install the exact resolved graph from `requirements.lock` before
+- Use Python 3.10 or newer.
+- Install the exact hash-locked graph from `requirements.lock` before
   running the worker or the complete hosted-equivalent gate.
 - Keep Twitter/X and MongoDB credentials in environment variables only.
 
@@ -17,7 +17,9 @@ These instructions apply to the entire repository.
 - Tests: `make test`
 - Static contract: `make lint`
 - Build alias: `make build`
-- Dependency audit: `pip-audit -r requirements.lock`
+- Audit tool install in a separate venv:
+  `python -m pip install --require-hashes -r requirements-audit.lock`
+- Dependency audit: `python -m pip_audit --require-hashes --no-deps -r requirements.lock`
 
 ## Engineering Contracts
 

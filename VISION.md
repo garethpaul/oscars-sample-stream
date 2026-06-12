@@ -44,6 +44,7 @@ Priority:
 - Keep verification targets from leaving Python bytecode behind
 - Keep Python 3.10 and 3.12 hosted Linux validation credential-free and
   no-network
+- Keep production and dependency-audit installs exact and hash-locked
 
 Next priorities:
 

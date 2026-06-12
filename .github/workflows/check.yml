@@ -25,7 +25,7 @@ jobs:
       - uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405
         with:
           python-version: ${{ matrix.python-version }}
-      - run: python -m pip install --disable-pip-version-check -r requirements.lock
+      - run: python -m pip install --disable-pip-version-check --require-hashes -r requirements.lock
       - run: make check
   dependency-audit:
     runs-on: ubuntu-24.04
@@ -37,5 +37,5 @@ jobs:
       - uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405
         with:
           python-version: "3.12"
-      - run: python -m pip install --disable-pip-version-check pip-audit==2.10.0
-      - run: pip-audit -r requirements.lock
+      - run: python -m pip install --disable-pip-version-check --require-hashes -r requirements-audit.lock
+      - run: python -m pip_audit --require-hashes --no-deps -r requirements.lock

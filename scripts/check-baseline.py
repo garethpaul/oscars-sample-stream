@@ -328,6 +328,10 @@ urllib3==2.7.0
         "oscars-sample-stream",
         "insert_one",
         "420/429 disconnects",
+        "27431091719",
+        "27431172948",
+        "a987924593313554ed3d55c0bd8cfe388e7c3a93",
+        "zero annotations",
     ]:
         if evidence not in modern_verification and evidence not in modern_work:
             failures.append(f"modern dependency plan must record {evidence}")

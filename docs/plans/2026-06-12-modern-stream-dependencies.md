@@ -97,3 +97,6 @@ injection, and rate-limit disconnect behavior.
   downgrades, retired APIs, credential bypass, broad rule deletion, missing
   author expansion, lock drift, audit removal, incomplete evidence, and unsafe
   delete-before-add rule replacement.
+- Canonical push run `27431091719` and pull-request run `27431172948` passed
+  Python 3.10, Python 3.12, and the dependency-audit job with zero annotations
+  at implementation head `a987924593313554ed3d55c0bd8cfe388e7c3a93`.

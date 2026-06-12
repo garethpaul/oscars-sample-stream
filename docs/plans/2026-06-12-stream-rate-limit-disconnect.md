@@ -32,7 +32,14 @@ Official behavior reference:
 - Do not log credentials, MongoDB URLs, payloads, or raw upstream errors.
 - Do not modify existing pull requests #2 or #3.
 
-## Verification
+## Work Completed
+
+- Returned `False` from `on_error(420)` to stop the legacy stream.
+- Preserved `True` for ordinary stream errors and timeout continuation.
+- Added no-network listener tests for all three decisions.
+- Preserved the retired integration boundary without custom backoff logic.
+
+## Verification Completed
 
 - `PYTHONDONTWRITEBYTECODE=1 python3 -m unittest -v test_sample_stream.py`
   passed with 15 tests on 2026-06-12.
@@ -43,3 +50,12 @@ Official behavior reference:
 - The focused rate-limit test rejected a mutation restoring `True` for status
   `420` on 2026-06-12.
 - `git diff --check` passed on 2026-06-12.
+- `python3 -m py_compile scripts/check-baseline.py` passed.
+- Canonical push run `27398483979` and pull-request run `27398488269`
+  completed successfully at exact head
+  `49fa4143965b1f5081d9288f73756bcb7096075d` across Python `3.10`
+  and Python `3.12`.
+- `test_listener_disconnects_on_stream_rate_limit` preserves
+  `self.assertFalse(listener.on_error(420))`.
+- `test_listener_continues_on_other_stream_errors` and
+  `test_listener_continues_after_timeout` preserve continuation behavior.

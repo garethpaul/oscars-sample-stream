@@ -3,6 +3,7 @@
 
 from pathlib import Path
 import ast
+import re
 import sys
 import xml.etree.ElementTree as ET
 
@@ -44,6 +45,14 @@ REQUIRED = [
 
 def read(path):
     return (ROOT / path).read_text(encoding="utf-8", errors="replace")
+
+
+def markdown_section(text, heading):
+    match = re.search(
+        rf"(?ms)^## {re.escape(heading)}\s*$\n(.*?)(?=^## |\Z)",
+        text,
+    )
+    return match.group(1).strip() if match else ""
 
 
 def main():
@@ -230,12 +239,35 @@ def main():
     if "status: completed" not in hosted_validation_plan or "make check" not in hosted_validation_plan:
         failures.append("hosted no-network validation plan must record completed status and verification")
     rate_limit_disconnect_plan = read(RATE_LIMIT_DISCONNECT_PLAN)
-    if (
-        "status: completed" not in rate_limit_disconnect_plan
-        or "status `420`" not in rate_limit_disconnect_plan
-        or "make check" not in rate_limit_disconnect_plan
+    disconnect_status = re.findall(r"(?mi)^status:\s*(.+?)\s*$", rate_limit_disconnect_plan)
+    disconnect_work = markdown_section(rate_limit_disconnect_plan, "Work Completed")
+    disconnect_verification = markdown_section(rate_limit_disconnect_plan, "Verification Completed")
+    if disconnect_status != ["completed"] or not disconnect_work:
+        failures.append("stream rate-limit disconnect plan must record one completed status and completed work")
+    if not disconnect_verification or re.search(
+        r"(?i)\b(?:pending|todo|tbd|not run)\b", disconnect_verification
     ):
-        failures.append("stream rate-limit disconnect plan must record completed status and verification")
+        failures.append("stream rate-limit disconnect plan must record completed verification")
+    for evidence in [
+        "PYTHONDONTWRITEBYTECODE=1 python3 -m unittest -v test_sample_stream.py",
+        "make lint",
+        "make test",
+        "make build",
+        "make check",
+        "git diff --check",
+        "python3 -m py_compile scripts/check-baseline.py",
+        "27398483979",
+        "27398488269",
+        "49fa4143965b1f5081d9288f73756bcb7096075d",
+        "Python `3.10`",
+        "Python `3.12`",
+        "test_listener_disconnects_on_stream_rate_limit",
+        "self.assertFalse(listener.on_error(420))",
+        "test_listener_continues_on_other_stream_errors",
+        "test_listener_continues_after_timeout",
+    ]:
+        if evidence not in disconnect_verification:
+            failures.append(f"stream rate-limit disconnect verification must record {evidence}")
 
     try:
         ET.parse(ROOT / "docs/readme-overview.svg")

@@ -78,7 +78,10 @@ def tagged_rule_ids(rules):
 
 
 def sync_stream_rule(stream, rule_value):
-    current = stream.get_rules().data or []
+    listed_rules = stream.get_rules()
+    if listed_rules.errors:
+        raise RuntimeError("Twitter/X could not list existing stream rules")
+    current = listed_rules.data or []
     existing_ids = tagged_rule_ids(current)
     result = stream.add_rules(tweepy.StreamRule(value=rule_value, tag=RULE_TAG))
     if result.errors or not result.data:

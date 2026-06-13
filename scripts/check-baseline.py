@@ -16,6 +16,7 @@ RATE_LIMIT_DISCONNECT_PLAN = "docs/plans/2026-06-12-stream-rate-limit-disconnect
 MODERN_DEPENDENCIES_PLAN = "docs/plans/2026-06-12-modern-stream-dependencies.md"
 HASH_LOCK_PLAN = "docs/plans/2026-06-12-hash-locked-dependency-installs.md"
 DRY_RUN_PLAN = "docs/plans/2026-06-13-dry-run-stream-rule.md"
+RULE_LIST_ERROR_PLAN = "docs/plans/2026-06-13-stream-rule-list-error-boundary.md"
 PRODUCTION_LOCK_SHA256 = "27ea76d7d0f7efea504ebcee475e411502bc775dceab3e10501563085d77ce1c"
 AUDIT_LOCK_SHA256 = "fc7ce7c6f13eee2008ea150facb1560903d6d12f4d6ad5245e68fdc3a75e607b"
 REQUIRED = [
@@ -46,6 +47,7 @@ REQUIRED = [
     MODERN_DEPENDENCIES_PLAN,
     HASH_LOCK_PLAN,
     DRY_RUN_PLAN,
+    RULE_LIST_ERROR_PLAN,
     "requirements-audit.in",
     "requirements-audit.lock",
     "requirements.txt",
@@ -146,6 +148,8 @@ def main():
         "if status_code in (420, 429)",
         "self.disconnect()",
         "tweepy.StreamRule(value=rule_value, tag=RULE_TAG)",
+        "if listed_rules.errors:",
+        "Twitter/X could not list existing stream rules",
         "stream.delete_rules(existing_ids)",
         "if result.errors or not result.data",
         "Twitter/X rejected the replacement stream rule",
@@ -171,6 +175,20 @@ def main():
     for retired in ["OAuthHandler", "StreamListener", "tweepy.streaming.Stream", ".tweets.insert("]:
         if retired in stream:
             failures.append(f"sample_stream.py must not restore retired API {retired}")
+    sync_source = stream[stream.find("def sync_stream_rule"):stream.find("def expanded_username")]
+    sync_markers = [
+        "listed_rules = stream.get_rules()",
+        "if listed_rules.errors:",
+        "stream.add_rules(",
+        "stream.delete_rules(existing_ids)",
+    ]
+    if any(marker not in sync_source for marker in sync_markers) or not all(
+        sync_source.find(left) < sync_source.find(right)
+        for left, right in zip(sync_markers, sync_markers[1:])
+    ):
+        failures.append(
+            "rule synchronization must reject list errors before add and delete operations"
+        )
 
     tests = read("test_sample_stream.py")
     for phrase in [
@@ -181,6 +199,10 @@ def main():
         "test_start_stream_configures_tagged_oscars_rule",
         "test_start_stream_replaces_only_worker_tagged_rules",
         "test_rejected_replacement_rule_preserves_existing_rule",
+        "test_rule_list_error_aborts_before_remote_mutation",
+        "FakeStreamingClient.get_errors",
+        "self.assertEqual([], stream.rule_operations)",
+        "self.assertIsNone(stream.filter_options)",
         "test_rule_terms_are_literal_and_bounded",
         "test_start_stream_accepts_single_custom_track_term",
         "test_start_stream_rejects_invalid_track_terms_before_client_setup",
@@ -199,6 +221,16 @@ def main():
     ]:
         if phrase not in tests:
             failures.append(f"test_sample_stream.py must include {phrase}")
+
+    rule_error_docs = {
+        "README.md": "startup stops before adding, deleting, or filtering",
+        "SECURITY.md": "failed existing-rule query aborts startup before add, delete, or filter",
+        "VISION.md": "failed persistent-rule discovery ahead of add, delete, and filter calls",
+        "CHANGES.md": "Abort stream startup before remote mutation",
+    }
+    for path, phrase in rule_error_docs.items():
+        if phrase not in " ".join(read(path).split()):
+            failures.append(f"{path} must include {phrase}")
 
     makefile = read("Makefile")
     for phrase in [
@@ -468,6 +500,38 @@ def main():
     ]:
         if evidence not in dry_run_verification:
             failures.append(f"dry-run verification must record {evidence}")
+
+    rule_list_error_plan = read(RULE_LIST_ERROR_PLAN)
+    rule_list_error_status = re.findall(
+        r"(?mi)^status:\s*(.+?)\s*$", rule_list_error_plan
+    )
+    rule_list_error_work = markdown_section(rule_list_error_plan, "Work Completed")
+    rule_list_error_verification = markdown_section(
+        rule_list_error_plan, "Verification Completed"
+    )
+    if rule_list_error_status != ["completed"] or not rule_list_error_work:
+        failures.append(
+            "rule-list error plan must record one completed status and completed work"
+        )
+    if not rule_list_error_verification or re.search(
+        r"(?i)\b(?:pending|todo|tbd|not run)\b", rule_list_error_verification
+    ):
+        failures.append("rule-list error plan must record completed verification")
+    for evidence in [
+        "PYTHONDONTWRITEBYTECODE=1 python3 -m unittest -v test_sample_stream.py",
+        "make lint",
+        "make test",
+        "make build",
+        "make check",
+        "external working directory",
+        "workflow YAML",
+        "dependency manifests",
+        "hostile mutations",
+        "git diff --check",
+        "secret and generated-artifact scan",
+    ]:
+        if evidence not in rule_list_error_verification:
+            failures.append(f"rule-list error verification must record {evidence}")
 
     try:
         ET.parse(ROOT / "docs/readme-overview.svg")

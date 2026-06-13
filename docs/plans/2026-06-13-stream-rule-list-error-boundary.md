@@ -1,6 +1,6 @@
 # Stream Rule List Error Boundary
 
-status: pending
+status: completed
 
 ## Context
 
@@ -26,8 +26,23 @@ rule already exists.
 
 ## Work Completed
 
-Pending implementation.
+- Added an explicit rule-list response error boundary before tagged-rule
+  selection, replacement creation, deletion, and stream filtering.
+- Extended the fake streaming client and no-network suite to force a list
+  failure through live startup and assert zero add, delete, filter, or MongoDB
+  operations.
+- Documented the persistent-state boundary and added ordering-sensitive source,
+  test, current-document, and completed-plan contracts.
 
 ## Verification Completed
 
-Pending implementation and validation.
+- `PYTHONDONTWRITEBYTECODE=1 python3 -m unittest -v test_sample_stream.py`
+- `make lint`, `make test`, `make build`, and `make check`
+- Ran the baseline checker from an external working directory.
+- Parsed the workflow YAML and dependency manifests.
+- Confirmed focused hostile mutations to failure ordering, test assertions,
+  current documentation, and completed-plan evidence are rejected.
+- `git diff --check`
+- The intended-path secret and generated-artifact scan passed; credentials,
+  dependency locks, configuration, storage fields, rule expressions, dry-run
+  behavior, and rate-limit handling had no unrelated diff.

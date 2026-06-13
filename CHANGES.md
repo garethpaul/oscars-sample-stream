@@ -2,6 +2,8 @@
 
 ## 2026-06-13
 
+- Abort stream startup before remote mutation when Twitter/X cannot list the
+  project's existing persistent API v2 rules.
 - Added a credential-free `--dry-run` path that emits the exact normalized API
   v2 rule tag and filter options as stable JSON without constructing clients,
   mutating remote rules, starting a stream, or writing MongoDB documents.

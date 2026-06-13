@@ -17,7 +17,9 @@ class FakeStreamRule:
 
 class FakeStreamingClient:
     initial_rules = []
+    get_errors = None
     add_errors = None
+    instances = []
 
     def __init__(self, bearer_token, **options):
         self.bearer_token = bearer_token
@@ -28,9 +30,13 @@ class FakeStreamingClient:
         self.disconnected = False
         self.rules = list(self.initial_rules)
         self.rule_operations = []
+        self.instances.append(self)
 
     def get_rules(self):
-        return types.SimpleNamespace(data=self.rules)
+        return types.SimpleNamespace(
+            data=None if self.get_errors else self.rules,
+            errors=self.get_errors,
+        )
 
     def delete_rules(self, ids):
         self.deleted_rule_ids.extend(ids)
@@ -87,7 +93,9 @@ def load_sample_stream(overrides=None, rules=None):
         os.environ[key] = value
 
     FakeStreamingClient.initial_rules = list(rules or [])
+    FakeStreamingClient.get_errors = None
     FakeStreamingClient.add_errors = None
+    FakeStreamingClient.instances = []
     sys.modules["tweepy"] = types.SimpleNamespace(
         StreamingClient=FakeStreamingClient,
         StreamRule=FakeStreamRule,
@@ -216,6 +224,20 @@ class SampleStreamTest(unittest.TestCase):
             sample_stream.sync_stream_rule(stream, "#oscars")
         self.assertEqual([], stream.deleted_rule_ids)
         self.assertEqual(["add"], stream.rule_operations)
+
+    def test_rule_list_error_aborts_before_remote_mutation(self):
+        sample_stream = load_sample_stream()
+        FakeStreamingClient.get_errors = [{"message": "authorization failed"}]
+
+        with self.assertRaisesRegex(RuntimeError, "could not list existing"):
+            sample_stream.start_stream()
+
+        stream = FakeStreamingClient.instances[-1]
+        self.assertEqual([], stream.rule_operations)
+        self.assertEqual([], stream.added_rules)
+        self.assertEqual([], stream.deleted_rule_ids)
+        self.assertIsNone(stream.filter_options)
+        self.assertEqual([], stream.db.tweets.documents)
 
     def test_rule_terms_are_literal_and_bounded(self):
         sample_stream = load_sample_stream()

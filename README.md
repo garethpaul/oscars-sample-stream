@@ -83,7 +83,8 @@ python -m pip_audit --require-hashes --no-deps -r requirements.lock
 - Run `python sample_stream.py` or the Heroku `worker` process from `Procfile`.
 - The default stream filter is `#oscars`. The worker replaces only persistent
   API v2 rules tagged `oscars-sample-stream`; unrelated project rules are not
-  deleted.
+  deleted. If the existing-rule query fails, startup stops before adding,
+  deleting, or filtering so project-wide rule state is not changed blindly.
 - Custom stream filters must contain at least one non-empty string after
   trimming; blank custom stream filters are rejected instead of silently using
   the default.

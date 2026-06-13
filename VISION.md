@@ -45,10 +45,11 @@ Priority:
 - Keep Python 3.10 and 3.12 hosted Linux validation credential-free and
   no-network
 - Keep production and dependency-audit installs exact and hash-locked
+- Keep credential-free dry-run output aligned with live rule normalization and
+  isolated from client construction, remote state, streaming, and storage
 
 Next priorities:
 
-- Add a dry-run or mock-stream path for local testing
 - Add filter boundary fixtures without expanding collection scope defaults
 - Move configuration examples into environment-variable documentation
 - Document retention and cleanup expectations for stored stream fields

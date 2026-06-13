@@ -1,6 +1,6 @@
 # Dry-Run Stream Rule
 
-status: planned
+status: completed
 
 ## Context
 
@@ -88,3 +88,26 @@ all gates and hostile mutations pass.
 - Do not broaden the default collection filter or stored document fields.
 - Do not change rule replacement, rate-limit disconnect, payload validation,
   author expansion, or MongoDB insertion behavior.
+
+## Work Completed
+
+Added a shared structured stream plan, credential-free dry-run branch,
+repeatable track-term CLI, stable JSON output, operator guidance, no-network
+tests, and mutation-sensitive baseline checks without changing live stream or
+storage behavior.
+
+## Verification Completed
+
+- `PYTHONDONTWRITEBYTECODE=1 python3 -m unittest -v test_sample_stream.py`,
+  `make lint`, `make test`, `make build`, and `make check` passed.
+- `python3 sample_stream.py --dry-run` passed without credentials in an
+  isolated locked runtime environment.
+- The checker passed from an external working directory; workflow YAML and
+  dependency manifests parsed successfully.
+- Ten focused hostile mutations rejected weakened dry-run side-effect,
+  structured-output, test, and completed-plan contracts.
+- `live behavior paths had no unrelated diff`; dependency locks, workflow,
+  configuration loading, payload storage, rule synchronization, and rate-limit
+  handling remained unchanged outside the shared startup-plan wiring.
+- `git diff --check` and the intended-diff secret and generated-artifact scan
+  passed.

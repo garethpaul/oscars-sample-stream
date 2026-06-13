@@ -64,6 +64,18 @@ python -m pip_audit --require-hashes --no-deps -r requirements.lock
 
 ## Running or Using the Project
 
+- Preview the exact tagged rule and stream options without credentials, remote
+  rule changes, MongoDB access, or network calls:
+
+  ```bash
+  python sample_stream.py --dry-run
+  python sample_stream.py --dry-run --track-term '#oscars2026' --track-term 'best picture'
+  ```
+
+  Dry-run output is stable JSON. It validates the same normalization, term
+  count, quoting, and 512-byte rule limit as live startup, but it does not prove
+  Twitter/X authorization, remote rule state, stream connectivity, or MongoDB
+  access.
 - Configure a Twitter/X API v2 bearer token with `bearer_token` or
   `BEARER_TOKEN`.
 - Configure MongoDB with `MONGOHQ_URL` or `MONGO_URL`.

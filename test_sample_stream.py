@@ -1,4 +1,5 @@
 import importlib
+import io
 import json
 import os
 import sys
@@ -106,6 +107,74 @@ def stream_payload(text="  hello oscars  ", author_id="42", username=" academy "
 
 
 class SampleStreamTest(unittest.TestCase):
+    def test_stream_plan_matches_live_rule_and_filter_options(self):
+        sample_stream = load_sample_stream()
+
+        plan = sample_stream.stream_plan([" #oscars2026 ", "best picture"])
+
+        self.assertEqual({
+            "rule_tag": "oscars-sample-stream",
+            "rule_value": '#oscars2026 OR "best picture"',
+            "expansions": ["author_id"],
+            "user_fields": ["username"],
+        }, plan)
+
+        stream = sample_stream.start_stream([" #oscars2026 ", "best picture"])
+        self.assertEqual(plan["rule_value"], stream.added_rules[0].value)
+        self.assertEqual(plan["rule_tag"], stream.added_rules[0].tag)
+        self.assertEqual({
+            "expansions": plan["expansions"],
+            "user_fields": plan["user_fields"],
+        }, stream.filter_options)
+
+    def test_dry_run_returns_default_plan_without_credentials_or_clients(self):
+        sample_stream = load_sample_stream()
+        for key in ENV_NAMES:
+            os.environ.pop(key, None)
+
+        def unexpected_client(*args, **kwargs):
+            self.fail("dry run must not construct a Twitter/X or MongoDB client")
+
+        sample_stream.create_stream = unexpected_client
+
+        self.assertEqual({
+            "rule_tag": "oscars-sample-stream",
+            "rule_value": "#oscars",
+            "expansions": ["author_id"],
+            "user_fields": ["username"],
+        }, sample_stream.start_stream(dry_run=True))
+
+    def test_main_dry_run_emits_stable_json_for_repeated_track_terms(self):
+        sample_stream = load_sample_stream()
+        for key in ENV_NAMES:
+            os.environ.pop(key, None)
+        output = io.StringIO()
+
+        result = sample_stream.main(
+            ["--dry-run", "--track-term", " #oscars2026 ", "--track-term", "best picture"],
+            output=output,
+        )
+
+        expected = {
+            "rule_tag": "oscars-sample-stream",
+            "rule_value": '#oscars2026 OR "best picture"',
+            "expansions": ["author_id"],
+            "user_fields": ["username"],
+        }
+        self.assertEqual(expected, result)
+        self.assertEqual(json.dumps(expected, sort_keys=True) + "\n", output.getvalue())
+
+    def test_main_without_dry_run_preserves_live_startup(self):
+        sample_stream = load_sample_stream()
+
+        stream = sample_stream.main(["--track-term", "#oscars2026"])
+
+        self.assertEqual("#oscars2026", stream.added_rules[0].value)
+        self.assertEqual(
+            {"expansions": ["author_id"], "user_fields": ["username"]},
+            stream.filter_options,
+        )
+
     def test_start_stream_configures_tagged_oscars_rule(self):
         sample_stream = load_sample_stream()
 

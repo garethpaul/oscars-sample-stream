@@ -66,6 +66,10 @@ Persistent API v2 rules are project-wide state. The worker may replace only
 rules tagged `oscars-sample-stream`; broad deletion could disrupt unrelated
 stream consumers. Rule expressions are bounded to 512 UTF-8 bytes before
 client setup.
+Use `python sample_stream.py --dry-run` to inspect normalized rule JSON without
+reading bearer-token or MongoDB environment values, constructing clients,
+mutating persistent API v2 rules, starting a stream, or writing documents.
+Dry-run success is not a credentialed connectivity or authorization check.
 Pinned, read-only hosted Linux validation installs hash-locked Tweepy 4.16.0 and PyMongo
 4.17.0, then runs the fake-client baseline on two Python versions without
 credentials, live Twitter calls, or MongoDB access. A separate pinned

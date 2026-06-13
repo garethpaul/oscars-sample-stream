@@ -15,6 +15,7 @@ HOSTED_VALIDATION_PLAN = "docs/plans/2026-06-10-hosted-no-network-validation.md"
 RATE_LIMIT_DISCONNECT_PLAN = "docs/plans/2026-06-12-stream-rate-limit-disconnect.md"
 MODERN_DEPENDENCIES_PLAN = "docs/plans/2026-06-12-modern-stream-dependencies.md"
 HASH_LOCK_PLAN = "docs/plans/2026-06-12-hash-locked-dependency-installs.md"
+DRY_RUN_PLAN = "docs/plans/2026-06-13-dry-run-stream-rule.md"
 PRODUCTION_LOCK_SHA256 = "27ea76d7d0f7efea504ebcee475e411502bc775dceab3e10501563085d77ce1c"
 AUDIT_LOCK_SHA256 = "fc7ce7c6f13eee2008ea150facb1560903d6d12f4d6ad5245e68fdc3a75e607b"
 REQUIRED = [
@@ -44,6 +45,7 @@ REQUIRED = [
     RATE_LIMIT_DISCONNECT_PLAN,
     MODERN_DEPENDENCIES_PLAN,
     HASH_LOCK_PLAN,
+    DRY_RUN_PLAN,
     "requirements-audit.in",
     "requirements-audit.lock",
     "requirements.txt",
@@ -107,6 +109,8 @@ def main():
         "def clean_required_text",
         "def clean_track_terms",
         "def stream_rule_value",
+        "def stream_plan",
+        "def main",
         "def sync_stream_rule",
         "def expanded_username",
         "class OscarsStream(tweepy.StreamingClient)",
@@ -117,7 +121,14 @@ def main():
         "track_terms must not include more than 100 values",
         "track_terms produce a stream rule larger than 512 bytes",
         "isinstance(track_terms, str)",
-        'stream.filter(expansions=["author_id"], user_fields=["username"])',
+        '"rule_tag": RULE_TAG',
+        '"rule_value": stream_rule_value(cleaned_track_terms)',
+        '"expansions": ["author_id"]',
+        '"user_fields": ["username"]',
+        "if dry_run:",
+        '"--dry-run"',
+        '"--track-term"',
+        "json.dumps(result, sort_keys=True)",
         "if __name__ == \"__main__\"",
         "isinstance(payload, dict)",
         "isinstance(tweet, dict)",
@@ -141,6 +152,20 @@ def main():
     ]:
         if phrase not in stream:
             failures.append(f"sample_stream.py must include {phrase}")
+    start_stream_source = stream[stream.find("def start_stream"):stream.find("def main")]
+    if not (
+        "plan = stream_plan(track_terms)" in start_stream_source
+        and "if dry_run:\n        return plan" in start_stream_source
+        and "stream = create_stream" in start_stream_source
+        and start_stream_source.find("if dry_run:")
+        < start_stream_source.find("stream = create_stream")
+    ):
+        failures.append(
+            "start_stream dry run must return the shared plan before client construction"
+        )
+    main_source = stream[stream.find("def main"):]
+    if "start_stream(track_terms=args.track_terms, dry_run=args.dry_run)" not in main_source:
+        failures.append("CLI must route live and dry-run startup through start_stream")
     if "straming_api" in stream:
         failures.append("sample_stream.py must not contain the stream startup typo")
     for retired in ["OAuthHandler", "StreamListener", "tweepy.streaming.Stream", ".tweets.insert("]:
@@ -163,6 +188,11 @@ def main():
         "FalsyMongoClient",
         "test_stream_uses_explicit_falsy_mongo_client",
         "test_stream_disconnects_on_rate_limits_only",
+        "test_stream_plan_matches_live_rule_and_filter_options",
+        "test_dry_run_returns_default_plan_without_credentials_or_clients",
+        "test_main_dry_run_emits_stable_json_for_repeated_track_terms",
+        "test_main_without_dry_run_preserves_live_startup",
+        "dry run must not construct a Twitter/X or MongoDB client",
         "test_stream_inserts_minimal_v2_tweet_document",
         "test_stream_ignores_malformed_or_incomplete_v2_payloads",
         "test_start_stream_rejects_more_than_one_hundred_track_terms",
@@ -297,6 +327,9 @@ def main():
         "oscars-sample-stream",
         "dependency audit",
         "hash-locked",
+        "credential-free dry-run output",
+        "stable JSON",
+        "does not prove",
     ]:
         if phrase.lower() not in docs.lower():
             failures.append(f"docs must mention {phrase}")
@@ -407,6 +440,34 @@ def main():
         failures.append("hash-lock plan must record one completed status and completed work")
     if not hash_lock_verification or "make check" not in hash_lock_verification:
         failures.append("hash-lock plan must record completed make check verification")
+
+    dry_run_plan = read(DRY_RUN_PLAN)
+    dry_run_status = re.findall(r"(?mi)^status:\s*(.+?)\s*$", dry_run_plan)
+    dry_run_work = markdown_section(dry_run_plan, "Work Completed")
+    dry_run_verification = markdown_section(dry_run_plan, "Verification Completed")
+    if dry_run_status != ["completed"] or not dry_run_work:
+        failures.append("dry-run plan must record one completed status and completed work")
+    if not dry_run_verification or re.search(
+        r"(?i)\b(?:pending|todo|tbd|not run)\b", dry_run_verification
+    ):
+        failures.append("dry-run plan must record completed verification")
+    for evidence in [
+        "PYTHONDONTWRITEBYTECODE=1 python3 -m unittest -v test_sample_stream.py",
+        "make lint",
+        "make test",
+        "make build",
+        "make check",
+        "python3 sample_stream.py --dry-run",
+        "external working directory",
+        "workflow YAML",
+        "dependency manifests",
+        "hostile mutations rejected",
+        "live behavior paths had no unrelated diff",
+        "git diff --check",
+        "secret and generated-artifact scan",
+    ]:
+        if evidence not in dry_run_verification:
+            failures.append(f"dry-run verification must record {evidence}")
 
     try:
         ET.parse(ROOT / "docs/readme-overview.svg")

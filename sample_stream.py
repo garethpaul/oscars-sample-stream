@@ -1,6 +1,8 @@
+import argparse
 import datetime
 import json
 import re
+import sys
 from collections.abc import Mapping
 
 import pymongo
@@ -59,6 +61,16 @@ def stream_rule_value(track_terms):
     if len(value.encode("utf-8")) > MAX_RULE_LENGTH:
         raise ValueError("track_terms produce a stream rule larger than 512 bytes")
     return value
+
+
+def stream_plan(track_terms=None):
+    cleaned_track_terms = clean_track_terms(track_terms)
+    return {
+        "rule_tag": RULE_TAG,
+        "rule_value": stream_rule_value(cleaned_track_terms),
+        "expansions": ["author_id"],
+        "user_fields": ["username"],
+    }
 
 
 def tagged_rule_ids(rules):
@@ -131,14 +143,45 @@ def create_stream(mongo_client=None):
     return OscarsStream(config.bearer_token(), mongo_client=mongo_client)
 
 
-def start_stream(track_terms=None, mongo_client=None):
-    cleaned_track_terms = clean_track_terms(track_terms)
-    rule_value = stream_rule_value(cleaned_track_terms)
+def start_stream(track_terms=None, mongo_client=None, dry_run=False):
+    plan = stream_plan(track_terms)
+    if dry_run:
+        return plan
+
     stream = create_stream(mongo_client=mongo_client)
-    sync_stream_rule(stream, rule_value)
-    stream.filter(expansions=["author_id"], user_fields=["username"])
+    sync_stream_rule(stream, plan["rule_value"])
+    stream.filter(
+        expansions=plan["expansions"],
+        user_fields=plan["user_fields"],
+    )
     return stream
 
 
+def main(argv=None, output=None):
+    parser = argparse.ArgumentParser(description="Run the Oscars API v2 stream worker")
+    parser.add_argument(
+        "--dry-run",
+        action="store_true",
+        help=(
+            "print the normalized stream rule without reading credentials "
+            "or creating clients"
+        ),
+    )
+    parser.add_argument(
+        "--track-term",
+        action="append",
+        dest="track_terms",
+        help="stream term to include; repeat for multiple terms",
+    )
+    args = parser.parse_args(argv)
+    result = start_stream(track_terms=args.track_terms, dry_run=args.dry_run)
+    if args.dry_run:
+        print(
+            json.dumps(result, sort_keys=True),
+            file=output if output is not None else sys.stdout,
+        )
+    return result
+
+
 if __name__ == "__main__":
-    start_stream()
+    main()

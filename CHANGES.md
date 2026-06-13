@@ -1,5 +1,11 @@
 # Changes
 
+## 2026-06-13
+
+- Added a credential-free `--dry-run` path that emits the exact normalized API
+  v2 rule tag and filter options as stable JSON without constructing clients,
+  mutating remote rules, starting a stream, or writing MongoDB documents.
+
 ## 2026-06-12
 
 - Added SHA-256 artifact hashes for production and dependency-audit graphs,

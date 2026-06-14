@@ -17,6 +17,7 @@ MODERN_DEPENDENCIES_PLAN = "docs/plans/2026-06-12-modern-stream-dependencies.md"
 HASH_LOCK_PLAN = "docs/plans/2026-06-12-hash-locked-dependency-installs.md"
 DRY_RUN_PLAN = "docs/plans/2026-06-13-dry-run-stream-rule.md"
 RULE_LIST_ERROR_PLAN = "docs/plans/2026-06-13-stream-rule-list-error-boundary.md"
+LOCATION_INDEPENDENT_MAKE_PLAN = "docs/plans/2026-06-14-location-independent-make-gates.md"
 PRODUCTION_LOCK_SHA256 = "27ea76d7d0f7efea504ebcee475e411502bc775dceab3e10501563085d77ce1c"
 AUDIT_LOCK_SHA256 = "fc7ce7c6f13eee2008ea150facb1560903d6d12f4d6ad5245e68fdc3a75e607b"
 REQUIRED = [
@@ -48,6 +49,7 @@ REQUIRED = [
     HASH_LOCK_PLAN,
     DRY_RUN_PLAN,
     RULE_LIST_ERROR_PLAN,
+    LOCATION_INDEPENDENT_MAKE_PLAN,
     "requirements-audit.in",
     "requirements-audit.lock",
     "requirements.txt",
@@ -231,12 +233,18 @@ def main():
     for path, phrase in rule_error_docs.items():
         if phrase not in " ".join(read(path).split()):
             failures.append(f"{path} must include {phrase}")
+    changes = " ".join(read("CHANGES.md").split())
+    if "external absolute-Makefile calls" not in changes:
+        failures.append(
+            "CHANGES.md must record external absolute-Makefile calls"
+        )
 
     makefile = read("Makefile")
     for phrase in [
         "PYTHON ?= python3",
-        "PYTHONDONTWRITEBYTECODE=1 $(PYTHON) -m unittest discover -v",
-        "PYTHONDONTWRITEBYTECODE=1 $(PYTHON) scripts/check-baseline.py",
+        "override REPO_ROOT := $(abspath $(dir $(lastword $(MAKEFILE_LIST))))",
+        'PYTHONDONTWRITEBYTECODE=1 $(PYTHON) -m unittest discover -v -s "$(REPO_ROOT)"',
+        'PYTHONDONTWRITEBYTECODE=1 $(PYTHON) "$(REPO_ROOT)/scripts/check-baseline.py"',
         "lint: static-check",
         "build: static-check",
         "verify: check",
@@ -362,6 +370,7 @@ def main():
         "credential-free dry-run output",
         "stable JSON",
         "does not prove",
+        "absolute Makefile path works from another directory",
     ]:
         if phrase.lower() not in docs.lower():
             failures.append(f"docs must mention {phrase}")
@@ -532,6 +541,48 @@ def main():
     ]:
         if evidence not in rule_list_error_verification:
             failures.append(f"rule-list error verification must record {evidence}")
+
+    location_make_plan = read(LOCATION_INDEPENDENT_MAKE_PLAN)
+    location_make_status = re.findall(
+        r"(?mi)^status:\s*(.+?)\s*$", location_make_plan
+    )
+    location_make_work = markdown_section(location_make_plan, "Work Completed")
+    location_make_verification = markdown_section(
+        location_make_plan, "Verification Completed"
+    )
+    if location_make_status != ["completed"] or not location_make_work:
+        failures.append(
+            "location-independent Make plan must record one completed status "
+            "and completed work"
+        )
+    if not location_make_verification or re.search(
+        r"(?i)\b(?:pending|todo|tbd|not run)\b", location_make_verification
+    ):
+        failures.append(
+            "location-independent Make plan must record completed verification"
+        )
+    for evidence in [
+        "make lint",
+        "make test",
+        "make build",
+        "make verify",
+        "make check",
+        "make static-check",
+        "17 no-network tests",
+        "from `/tmp`",
+        "absolute",
+        "caller-supplied `REPO_ROOT=/tmp`",
+        "caller-relative `PYTHON=./oscars-python`",
+        "requirements.lock",
+        "requirements-audit.lock",
+        "python3 -m py_compile scripts/check-baseline.py",
+        "workflow YAML parsed successfully",
+        "Ten isolated hostile mutations were rejected",
+    ]:
+        if evidence not in location_make_verification:
+            failures.append(
+                f"location-independent Make verification must record {evidence}"
+            )
 
     try:
         ET.parse(ROOT / "docs/readme-overview.svg")

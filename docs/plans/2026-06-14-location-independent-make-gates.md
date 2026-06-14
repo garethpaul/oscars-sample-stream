@@ -1,6 +1,6 @@
 # Location-Independent Make Gates
 
-status: planned
+status: completed
 
 ## Context
 
@@ -45,3 +45,30 @@ working directory.
   existing hash-locked dependency manifest dry runs.
 - Run isolated hostile mutations over rooted execution and completion evidence.
 - Audit intended paths, whitespace, generated artifacts, and secret-like data.
+
+## Work Completed
+
+The Makefile now derives an override-protected absolute repository root from
+its own location. Unittest discovery receives that root as its explicit start
+directory, and the dependency-free checker is invoked by its rooted path.
+Existing aliases, Python overrides, bytecode suppression, tests, runtime code,
+and dependency manifests remain unchanged.
+
+## Verification Completed
+
+- `make lint`, `make test`, `make build`, `make verify`, `make check`, and
+  `make static-check` passed from the repository root; the test-bearing aliases
+  ran all 17 no-network tests.
+- Every alias passed from `/tmp` through the repository's absolute Makefile
+  path.
+- External `make check` passed with caller-supplied `REPO_ROOT=/tmp`, confirming
+  command-line variables cannot redirect discovery or checker execution.
+- External `make check` passed with a caller-relative `PYTHON=./oscars-python`
+  override, confirming rooted discovery does not reinterpret the interpreter.
+- Hash-required pip dry runs passed for `requirements.lock` and
+  `requirements-audit.lock` without changing either manifest.
+- `python3 -m py_compile scripts/check-baseline.py` passed with bytecode routed
+  outside the repository, and the pinned workflow YAML parsed successfully.
+- Ten isolated hostile mutations were rejected across root derivation,
+  override resistance, unittest and checker recipes, completed evidence, and
+  maintenance documentation.

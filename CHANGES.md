@@ -1,5 +1,10 @@
 # Changes
 
+## 2026-06-14
+
+- Made every standard Make gate resolve unittest discovery and checker paths
+  from the repository root, including external absolute-Makefile calls.
+
 ## 2026-06-13
 
 - Abort stream startup before remote mutation when Twitter/X cannot list the

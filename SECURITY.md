@@ -66,7 +66,9 @@ Persistent API v2 rules are project-wide state. The worker may replace only
 rules tagged `oscars-sample-stream`; broad deletion could disrupt unrelated
 stream consumers. Rule expressions are bounded to 512 UTF-8 bytes before
 client setup. A failed existing-rule query aborts startup before add, delete,
-or filter operations rather than treating unknown project state as empty.
+or filter operations rather than treating unknown project state as empty. A
+failed tagged-rule deletion stops startup before filtering rather than hiding
+partially synchronized remote rule state.
 Use `python sample_stream.py --dry-run` to inspect normalized rule JSON without
 reading bearer-token or MongoDB environment values, constructing clients,
 mutating persistent API v2 rules, starting a stream, or writing documents.

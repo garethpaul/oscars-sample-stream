@@ -87,7 +87,9 @@ def sync_stream_rule(stream, rule_value):
     if result.errors or not result.data:
         raise RuntimeError("Twitter/X rejected the replacement stream rule")
     if existing_ids:
-        stream.delete_rules(existing_ids)
+        delete_result = stream.delete_rules(existing_ids)
+        if delete_result.errors:
+            raise RuntimeError("Twitter/X could not delete existing stream rules")
 
 
 def expanded_username(payload, author_id):

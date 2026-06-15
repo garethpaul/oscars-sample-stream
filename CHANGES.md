@@ -1,5 +1,10 @@
 # Changes
 
+## 2026-06-15
+
+- Stop stream startup before filtering when Twitter/X rejects deletion of the
+  previous worker-tagged rules.
+
 ## 2026-06-14
 
 - Made every standard Make gate resolve unittest discovery and checker paths

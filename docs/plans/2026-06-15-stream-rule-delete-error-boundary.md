@@ -1,6 +1,6 @@
 # Stream Rule Delete Error Boundary
 
-status: planned
+status: completed
 
 ## Context
 
@@ -50,12 +50,34 @@ though both the replacement rule and stale worker rules can remain active.
   starts filtering or writes a tweet.
 - Listing and replacement-add failures retain their existing behavior.
 
-## Verification To Complete
+## Work Completed
 
-- Run the focused deletion-error regression and full no-network unit suite.
-- Run `make check` from the repository root and through the absolute Makefile
-  path from an external directory.
-- Audit both exact dependency locks.
-- Reject isolated hostile mutations for response checking, test/static
-  contracts, documentation, and completed plan evidence.
-- Run final diff, artifact, and likely-secret audits before committing.
+- Captured the structured `delete_rules` response and raised a stable runtime
+  error when Twitter/X reports deletion errors.
+- Preserved add-before-delete ordering while preventing filter startup after a
+  partially synchronized remote rule update.
+- Extended the fake client with configurable delete errors and added a focused
+  regression proving add and delete were attempted without filtering or
+  persistence.
+- Added mutation-sensitive static contracts and updated maintenance, security,
+  vision, and change documentation for the deletion-error boundary.
+
+## Verification Completed
+
+- four focused rule synchronization tests passed for successful replacement,
+  replacement rejection, rule-list rejection, and delete rejection.
+- The full suite passed all 18 no-network tests with the exact hash-locked
+  production runtime on Python 3.12.
+- `make check` passed from the repository root and through the absolute
+  Makefile path from an external working directory in an exact mirror before
+  this evidence update, then passed again on the actual worktree.
+- `requirements.lock` installed with hashes and passed `pip check` after
+  removing the workstation's unrelated `PYTHONPATH` injection.
+- `requirements-audit.lock` installed with hashes and passed `pip check`; its
+  pinned `pip-audit` reported no known vulnerabilities in `requirements.lock`.
+- Seven isolated hostile mutations were rejected: removed response checking,
+  removed response capture, removed test naming contract, removed fake error
+  contract, removed documentation, incomplete plan status, and a runtime
+  response-check bypass caught by the focused regression.
+- `git diff --check`, exact intended-path review, and the final high-signal
+  secret and generated-artifact scan passed.

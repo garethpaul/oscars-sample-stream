@@ -18,6 +18,7 @@ HASH_LOCK_PLAN = "docs/plans/2026-06-12-hash-locked-dependency-installs.md"
 DRY_RUN_PLAN = "docs/plans/2026-06-13-dry-run-stream-rule.md"
 RULE_LIST_ERROR_PLAN = "docs/plans/2026-06-13-stream-rule-list-error-boundary.md"
 LOCATION_INDEPENDENT_MAKE_PLAN = "docs/plans/2026-06-14-location-independent-make-gates.md"
+RULE_DELETE_ERROR_PLAN = "docs/plans/2026-06-15-stream-rule-delete-error-boundary.md"
 PRODUCTION_LOCK_SHA256 = "27ea76d7d0f7efea504ebcee475e411502bc775dceab3e10501563085d77ce1c"
 AUDIT_LOCK_SHA256 = "fc7ce7c6f13eee2008ea150facb1560903d6d12f4d6ad5245e68fdc3a75e607b"
 REQUIRED = [
@@ -50,6 +51,7 @@ REQUIRED = [
     DRY_RUN_PLAN,
     RULE_LIST_ERROR_PLAN,
     LOCATION_INDEPENDENT_MAKE_PLAN,
+    RULE_DELETE_ERROR_PLAN,
     "requirements-audit.in",
     "requirements-audit.lock",
     "requirements.txt",
@@ -182,14 +184,16 @@ def main():
         "listed_rules = stream.get_rules()",
         "if listed_rules.errors:",
         "stream.add_rules(",
-        "stream.delete_rules(existing_ids)",
+        "delete_result = stream.delete_rules(existing_ids)",
+        "if delete_result.errors:",
     ]
     if any(marker not in sync_source for marker in sync_markers) or not all(
         sync_source.find(left) < sync_source.find(right)
         for left, right in zip(sync_markers, sync_markers[1:])
     ):
         failures.append(
-            "rule synchronization must reject list errors before add and delete operations"
+            "rule synchronization must reject list errors before mutation and "
+            "delete errors before filter startup"
         )
 
     tests = read("test_sample_stream.py")
@@ -202,7 +206,10 @@ def main():
         "test_start_stream_replaces_only_worker_tagged_rules",
         "test_rejected_replacement_rule_preserves_existing_rule",
         "test_rule_list_error_aborts_before_remote_mutation",
+        "test_rule_delete_error_aborts_before_filter_start",
         "FakeStreamingClient.get_errors",
+        "FakeStreamingClient.delete_errors",
+        "self.assertEqual([\"add\", \"delete\"], stream.rule_operations)",
         "self.assertEqual([], stream.rule_operations)",
         "self.assertIsNone(stream.filter_options)",
         "test_rule_terms_are_literal_and_bounded",
@@ -231,6 +238,16 @@ def main():
         "CHANGES.md": "Abort stream startup before remote mutation",
     }
     for path, phrase in rule_error_docs.items():
+        if phrase not in " ".join(read(path).split()):
+            failures.append(f"{path} must include {phrase}")
+
+    delete_error_docs = {
+        "README.md": "a rejected stale-rule deletion stops startup before filtering",
+        "SECURITY.md": "failed tagged-rule deletion stops startup before filtering",
+        "VISION.md": "failed tagged-rule deletion visible before filter startup",
+        "CHANGES.md": "Stop stream startup before filtering when Twitter/X rejects deletion",
+    }
+    for path, phrase in delete_error_docs.items():
         if phrase not in " ".join(read(path).split()):
             failures.append(f"{path} must include {phrase}")
     changes = " ".join(read("CHANGES.md").split())
@@ -583,6 +600,39 @@ def main():
             failures.append(
                 f"location-independent Make verification must record {evidence}"
             )
+
+    rule_delete_error_plan = read(RULE_DELETE_ERROR_PLAN)
+    rule_delete_error_status = re.findall(
+        r"(?mi)^status:\s*(.+?)\s*$", rule_delete_error_plan
+    )
+    rule_delete_error_work = markdown_section(
+        rule_delete_error_plan, "Work Completed"
+    )
+    rule_delete_error_verification = markdown_section(
+        rule_delete_error_plan, "Verification Completed"
+    )
+    if rule_delete_error_status != ["completed"] or not rule_delete_error_work:
+        failures.append(
+            "rule-delete error plan must record one completed status and completed work"
+        )
+    if not rule_delete_error_verification or re.search(
+        r"(?i)\b(?:pending|todo|tbd|not run|to complete)\b",
+        rule_delete_error_verification,
+    ):
+        failures.append("rule-delete error plan must record completed verification")
+    for evidence in [
+        "four focused rule synchronization tests",
+        "18 no-network tests",
+        "make check",
+        "external working directory",
+        "requirements.lock",
+        "requirements-audit.lock",
+        "isolated hostile mutations",
+        "git diff --check",
+        "secret and generated-artifact scan",
+    ]:
+        if evidence not in rule_delete_error_verification:
+            failures.append(f"rule-delete error verification must record {evidence}")
 
     try:
         ET.parse(ROOT / "docs/readme-overview.svg")

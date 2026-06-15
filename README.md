@@ -85,6 +85,8 @@ python -m pip_audit --require-hashes --no-deps -r requirements.lock
   API v2 rules tagged `oscars-sample-stream`; unrelated project rules are not
   deleted. If the existing-rule query fails, startup stops before adding,
   deleting, or filtering so project-wide rule state is not changed blindly.
+  After a replacement is added, a rejected stale-rule deletion stops startup
+  before filtering so partial remote synchronization is visible to operators.
 - Custom stream filters must contain at least one non-empty string after
   trimming; blank custom stream filters are rejected instead of silently using
   the default.
@@ -150,6 +152,8 @@ When the required SDK or runtime is unavailable, use static checks and source re
 - Explicit MongoDB client injection should stay reliable for fake clients used
   in no-network tests.
 - Tagged API v2 rule replacement must never delete another worker's rules.
+- Failed tagged-rule deletion must not be treated as successful synchronization
+  or allow filter startup to continue.
 - Stream payloads without a matching expanded author must not be stored.
 
 ## Maintenance Notes

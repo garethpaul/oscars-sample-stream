@@ -41,6 +41,7 @@ Priority:
 - Keep API v2 stream rate-limit errors from reconnecting indefinitely
 - Keep rule replacement scoped to the `oscars-sample-stream` tag
 - Keep failed persistent-rule discovery ahead of add, delete, and filter calls
+- Keep failed tagged-rule deletion visible before filter startup
 - Require expanded author identity before MongoDB storage through `insert_one`
 - Keep verification targets from leaving Python bytecode behind
 - Keep Python 3.10 and 3.12 hosted Linux validation credential-free and

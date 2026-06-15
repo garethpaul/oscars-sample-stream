@@ -19,6 +19,7 @@ class FakeStreamingClient:
     initial_rules = []
     get_errors = None
     add_errors = None
+    delete_errors = None
     instances = []
 
     def __init__(self, bearer_token, **options):
@@ -41,6 +42,10 @@ class FakeStreamingClient:
     def delete_rules(self, ids):
         self.deleted_rule_ids.extend(ids)
         self.rule_operations.append("delete")
+        return types.SimpleNamespace(
+            data=None if self.delete_errors else {"deleted": list(ids)},
+            errors=self.delete_errors,
+        )
 
     def add_rules(self, rules):
         self.added_rules.append(rules)
@@ -95,6 +100,7 @@ def load_sample_stream(overrides=None, rules=None):
     FakeStreamingClient.initial_rules = list(rules or [])
     FakeStreamingClient.get_errors = None
     FakeStreamingClient.add_errors = None
+    FakeStreamingClient.delete_errors = None
     FakeStreamingClient.instances = []
     sys.modules["tweepy"] = types.SimpleNamespace(
         StreamingClient=FakeStreamingClient,
@@ -236,6 +242,23 @@ class SampleStreamTest(unittest.TestCase):
         self.assertEqual([], stream.rule_operations)
         self.assertEqual([], stream.added_rules)
         self.assertEqual([], stream.deleted_rule_ids)
+        self.assertIsNone(stream.filter_options)
+        self.assertEqual([], stream.db.tweets.documents)
+
+    def test_rule_delete_error_aborts_before_filter_start(self):
+        worker_rule = FakeStreamRule(
+            value="#oscars2025", tag="oscars-sample-stream", id="worker-old"
+        )
+        sample_stream = load_sample_stream(rules=[worker_rule])
+        FakeStreamingClient.delete_errors = [{"message": "delete rejected"}]
+
+        with self.assertRaisesRegex(RuntimeError, "could not delete existing"):
+            sample_stream.start_stream()
+
+        stream = FakeStreamingClient.instances[-1]
+        self.assertEqual(["add", "delete"], stream.rule_operations)
+        self.assertEqual(["worker-old"], stream.deleted_rule_ids)
+        self.assertEqual(1, len(stream.added_rules))
         self.assertIsNone(stream.filter_options)
         self.assertEqual([], stream.db.tweets.documents)
 

@@ -19,6 +19,7 @@ DRY_RUN_PLAN = "docs/plans/2026-06-13-dry-run-stream-rule.md"
 RULE_LIST_ERROR_PLAN = "docs/plans/2026-06-13-stream-rule-list-error-boundary.md"
 LOCATION_INDEPENDENT_MAKE_PLAN = "docs/plans/2026-06-14-location-independent-make-gates.md"
 RULE_DELETE_ERROR_PLAN = "docs/plans/2026-06-15-stream-rule-delete-error-boundary.md"
+IDEMPOTENT_RULE_SYNC_PLAN = "docs/plans/2026-06-16-idempotent-stream-rule-sync.md"
 PRODUCTION_LOCK_SHA256 = "27ea76d7d0f7efea504ebcee475e411502bc775dceab3e10501563085d77ce1c"
 AUDIT_LOCK_SHA256 = "fc7ce7c6f13eee2008ea150facb1560903d6d12f4d6ad5245e68fdc3a75e607b"
 REQUIRED = [
@@ -52,6 +53,7 @@ REQUIRED = [
     RULE_LIST_ERROR_PLAN,
     LOCATION_INDEPENDENT_MAKE_PLAN,
     RULE_DELETE_ERROR_PLAN,
+    IDEMPOTENT_RULE_SYNC_PLAN,
     "requirements-audit.in",
     "requirements-audit.lock",
     "requirements.txt",
@@ -183,6 +185,8 @@ def main():
     sync_markers = [
         "listed_rules = stream.get_rules()",
         "if listed_rules.errors:",
+        "worker_rules = [rule for rule in current if rule.tag == RULE_TAG]",
+        "if len(worker_rules) == 1 and worker_rules[0].value == rule_value:",
         "stream.add_rules(",
         "delete_result = stream.delete_rules(existing_ids)",
         "if delete_result.errors:",
@@ -204,6 +208,8 @@ def main():
         "test_config_ignores_blank_bearer_token_and_uses_fallback",
         "test_start_stream_configures_tagged_oscars_rule",
         "test_start_stream_replaces_only_worker_tagged_rules",
+        "test_start_stream_reuses_single_matching_worker_rule",
+        "test_start_stream_replaces_duplicate_matching_worker_rules",
         "test_rejected_replacement_rule_preserves_existing_rule",
         "test_rule_list_error_aborts_before_remote_mutation",
         "test_rule_delete_error_aborts_before_filter_start",
@@ -211,6 +217,7 @@ def main():
         "FakeStreamingClient.delete_errors",
         "self.assertEqual([\"add\", \"delete\"], stream.rule_operations)",
         "self.assertEqual([], stream.rule_operations)",
+        "self.assertEqual([\"first\", \"second\"], stream.deleted_rule_ids)",
         "self.assertIsNone(stream.filter_options)",
         "test_rule_terms_are_literal_and_bounded",
         "test_start_stream_accepts_single_custom_track_term",
@@ -388,6 +395,7 @@ def main():
         "stable JSON",
         "does not prove",
         "absolute Makefile path works from another directory",
+        "single matching tagged rule",
     ]:
         if phrase.lower() not in docs.lower():
             failures.append(f"docs must mention {phrase}")
@@ -633,6 +641,34 @@ def main():
     ]:
         if evidence not in rule_delete_error_verification:
             failures.append(f"rule-delete error verification must record {evidence}")
+
+    idempotent_rule_plan = read(IDEMPOTENT_RULE_SYNC_PLAN)
+    idempotent_rule_status = re.findall(
+        r"(?mi)^status:\s*(.+?)\s*$", idempotent_rule_plan
+    )
+    idempotent_rule_work = markdown_section(idempotent_rule_plan, "Work Completed")
+    idempotent_rule_verification = markdown_section(
+        idempotent_rule_plan, "Verification Completed"
+    )
+    if idempotent_rule_status != ["completed"] or not idempotent_rule_work:
+        failures.append(
+            "idempotent rule plan must record one completed status and completed work"
+        )
+    if not idempotent_rule_verification or re.search(
+        r"(?i)\b(?:pending|todo|tbd|not run|to complete)\b",
+        idempotent_rule_verification,
+    ):
+        failures.append("idempotent rule plan must record completed verification")
+    for evidence in [
+        "six focused rule synchronization tests",
+        "20 no-network tests",
+        "make check",
+        "external working directory",
+        "Six isolated hostile mutations were rejected",
+        "Exact diff",
+    ]:
+        if evidence not in idempotent_rule_verification:
+            failures.append(f"idempotent rule verification must record {evidence}")
 
     try:
         ET.parse(ROOT / "docs/readme-overview.svg")

@@ -85,6 +85,8 @@ python -m pip_audit --require-hashes --no-deps -r requirements.lock
   API v2 rules tagged `oscars-sample-stream`; unrelated project rules are not
   deleted. If the existing-rule query fails, startup stops before adding,
   deleting, or filtering so project-wide rule state is not changed blindly.
+  A single matching tagged rule is reused without add/delete calls; stale,
+  missing, or duplicate tagged state still follows the convergence path.
   After a replacement is added, a rejected stale-rule deletion stops startup
   before filtering so partial remote synchronization is visible to operators.
 - Custom stream filters must contain at least one non-empty string after

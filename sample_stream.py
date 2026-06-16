@@ -82,7 +82,10 @@ def sync_stream_rule(stream, rule_value):
     if listed_rules.errors:
         raise RuntimeError("Twitter/X could not list existing stream rules")
     current = listed_rules.data or []
-    existing_ids = tagged_rule_ids(current)
+    worker_rules = [rule for rule in current if rule.tag == RULE_TAG]
+    if len(worker_rules) == 1 and worker_rules[0].value == rule_value:
+        return
+    existing_ids = tagged_rule_ids(worker_rules)
     result = stream.add_rules(tweepy.StreamRule(value=rule_value, tag=RULE_TAG))
     if result.errors or not result.data:
         raise RuntimeError("Twitter/X rejected the replacement stream rule")

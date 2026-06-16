@@ -42,6 +42,8 @@ Priority:
 - Keep rule replacement scoped to the `oscars-sample-stream` tag
 - Keep failed persistent-rule discovery ahead of add, delete, and filter calls
 - Keep failed tagged-rule deletion visible before filter startup
+- Reuse a single matching tagged rule without remote mutation while converging
+  stale or duplicate worker-tagged state
 - Require expanded author identity before MongoDB storage through `insert_one`
 - Keep verification targets from leaving Python bytecode behind
 - Keep Python 3.10 and 3.12 hosted Linux validation credential-free and

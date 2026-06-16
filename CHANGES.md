@@ -1,5 +1,10 @@
 # Changes
 
+## 2026-06-16
+
+- Reused a single matching tagged stream rule without add/delete calls while
+  retaining replacement convergence for stale or duplicate tagged state.
+
 ## 2026-06-15
 
 - Stop stream startup before filtering when Twitter/X rejects deletion of the

@@ -1,6 +1,6 @@
 ---
 title: Idempotent Stream Rule Synchronization
-status: in_progress
+status: completed
 date: 2026-06-16
 ---
 
@@ -54,3 +54,25 @@ when tagged state is stale, missing, or duplicated.
 - Do not call the live Twitter/X API or MongoDB.
 - Do not alter the replacement-before-delete ordering for nonmatching state.
 - Do not merge or close any stacked pull request.
+
+## Work Completed
+
+- Reused exactly one matching worker-tagged rule without remote mutations.
+- Preserved add-then-delete convergence for missing, stale, or duplicate tagged
+  state, including all existing list/add/delete error boundaries.
+- Added focused runtime, static, guidance, changelog, and completed-plan
+  contracts.
+
+## Verification Completed
+
+- All six focused rule synchronization tests passed.
+- The complete 20 no-network tests passed.
+- A finalized tracked-file mirror passed repository validation.
+- The external working directory make check passed before this plan was
+  completed.
+- Six isolated hostile mutations were rejected for cardinality, value matching,
+  short-circuiting, runtime coverage, guidance, and plan status.
+- Exact diff, bytecode/artifact, whitespace, file-mode, and added-line credential
+  audits passed before the canonical final gates.
+- Live Twitter/X API authorization, persistent rule state, stream delivery, and
+  MongoDB persistence were not exercised.

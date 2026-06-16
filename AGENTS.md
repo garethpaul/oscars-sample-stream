@@ -27,6 +27,8 @@ These instructions apply to the entire repository.
 - Validate track terms and the final rule byte length before client setup.
 - Manage only API v2 rules tagged `oscars-sample-stream`; never delete
   unrelated project rules.
+- Reuse a single matching tagged rule without add/delete calls; stale or
+  duplicate worker-tagged rules must still converge through replacement.
 - Require author expansion before storing a normalized username.
 - Use `insert_one` for MongoDB writes and preserve explicit falsy-client
   injection.

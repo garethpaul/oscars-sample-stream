@@ -215,6 +215,38 @@ class SampleStreamTest(unittest.TestCase):
         self.assertEqual('#oscars2026 OR "best picture"', stream.added_rules[0].value)
         self.assertEqual(["add", "delete"], stream.rule_operations)
 
+    def test_start_stream_reuses_single_matching_worker_rule(self):
+        rules = [
+            FakeStreamRule(
+                value="#oscars", tag="oscars-sample-stream", id="worker-current"
+            ),
+            FakeStreamRule(value="#other", tag="another-worker", id="unrelated"),
+        ]
+        sample_stream = load_sample_stream(rules=rules)
+
+        stream = sample_stream.start_stream()
+
+        self.assertEqual([], stream.rule_operations)
+        self.assertEqual([], stream.added_rules)
+        self.assertEqual([], stream.deleted_rule_ids)
+        self.assertEqual(
+            {"expansions": ["author_id"], "user_fields": ["username"]},
+            stream.filter_options,
+        )
+
+    def test_start_stream_replaces_duplicate_matching_worker_rules(self):
+        rules = [
+            FakeStreamRule(value="#oscars", tag="oscars-sample-stream", id="first"),
+            FakeStreamRule(value="#oscars", tag="oscars-sample-stream", id="second"),
+        ]
+        sample_stream = load_sample_stream(rules=rules)
+
+        stream = sample_stream.start_stream()
+
+        self.assertEqual(["add", "delete"], stream.rule_operations)
+        self.assertEqual(["first", "second"], stream.deleted_rule_ids)
+        self.assertEqual("#oscars", stream.added_rules[0].value)
+
     def test_rejected_replacement_rule_preserves_existing_rule(self):
         rules = [FakeStreamRule(id="ours", tag="oscars-sample-stream")]
         sample_stream = load_sample_stream(rules=rules)

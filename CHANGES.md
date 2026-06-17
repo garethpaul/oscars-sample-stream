@@ -1,5 +1,10 @@
 # Changes
 
+## 2026-06-17
+
+- Added matching stream rule cleanup that retains an existing desired rule while
+  removing stale or duplicate worker-tagged rules without another add.
+
 ## 2026-06-16
 
 - Reused a single matching tagged stream rule without add/delete calls while

@@ -71,6 +71,8 @@ failed tagged-rule deletion stops startup before filtering rather than hiding
 partially synchronized remote rule state.
 A single matching tagged rule is reused without remote mutations, reducing
 avoidable API failure exposure while duplicate or stale state still converges.
+Matching stream rule cleanup retains an existing desired rule and removes only
+redundant worker-tagged rules, limiting quota use and retry amplification.
 Use `python sample_stream.py --dry-run` to inspect normalized rule JSON without
 reading bearer-token or MongoDB environment values, constructing clients,
 mutating persistent API v2 rules, starting a stream, or writing documents.

@@ -234,7 +234,7 @@ class SampleStreamTest(unittest.TestCase):
             stream.filter_options,
         )
 
-    def test_start_stream_replaces_duplicate_matching_worker_rules(self):
+    def test_start_stream_reuses_one_duplicate_matching_worker_rule(self):
         rules = [
             FakeStreamRule(value="#oscars", tag="oscars-sample-stream", id="first"),
             FakeStreamRule(value="#oscars", tag="oscars-sample-stream", id="second"),
@@ -243,9 +243,27 @@ class SampleStreamTest(unittest.TestCase):
 
         stream = sample_stream.start_stream()
 
-        self.assertEqual(["add", "delete"], stream.rule_operations)
-        self.assertEqual(["first", "second"], stream.deleted_rule_ids)
-        self.assertEqual("#oscars", stream.added_rules[0].value)
+        self.assertEqual(["delete"], stream.rule_operations)
+        self.assertEqual(["second"], stream.deleted_rule_ids)
+        self.assertEqual([], stream.added_rules)
+
+    def test_start_stream_reuses_matching_rule_while_deleting_stale_rule(self):
+        rules = [
+            FakeStreamRule(value="#oscars2025", tag="oscars-sample-stream", id="stale"),
+            FakeStreamRule(value="#oscars", tag="oscars-sample-stream", id="current"),
+            FakeStreamRule(value="#other", tag="another-worker", id="unrelated"),
+        ]
+        sample_stream = load_sample_stream(rules=rules)
+
+        stream = sample_stream.start_stream()
+
+        self.assertEqual(["delete"], stream.rule_operations)
+        self.assertEqual(["stale"], stream.deleted_rule_ids)
+        self.assertEqual([], stream.added_rules)
+        self.assertEqual(
+            {"expansions": ["author_id"], "user_fields": ["username"]},
+            stream.filter_options,
+        )
 
     def test_rejected_replacement_rule_preserves_existing_rule(self):
         rules = [FakeStreamRule(id="ours", tag="oscars-sample-stream")]
@@ -293,6 +311,23 @@ class SampleStreamTest(unittest.TestCase):
         self.assertEqual(1, len(stream.added_rules))
         self.assertIsNone(stream.filter_options)
         self.assertEqual([], stream.db.tweets.documents)
+
+    def test_matching_rule_cleanup_error_aborts_without_adding_or_filtering(self):
+        rules = [
+            FakeStreamRule(value="#oscars", tag="oscars-sample-stream", id="current"),
+            FakeStreamRule(value="#oscars2025", tag="oscars-sample-stream", id="stale"),
+        ]
+        sample_stream = load_sample_stream(rules=rules)
+        FakeStreamingClient.delete_errors = [{"message": "delete rejected"}]
+
+        with self.assertRaisesRegex(RuntimeError, "could not delete existing"):
+            sample_stream.start_stream()
+
+        stream = FakeStreamingClient.instances[-1]
+        self.assertEqual(["delete"], stream.rule_operations)
+        self.assertEqual(["stale"], stream.deleted_rule_ids)
+        self.assertEqual([], stream.added_rules)
+        self.assertIsNone(stream.filter_options)
 
     def test_rule_terms_are_literal_and_bounded(self):
         sample_stream = load_sample_stream()

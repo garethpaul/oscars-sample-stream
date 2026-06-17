@@ -20,6 +20,7 @@ RULE_LIST_ERROR_PLAN = "docs/plans/2026-06-13-stream-rule-list-error-boundary.md
 LOCATION_INDEPENDENT_MAKE_PLAN = "docs/plans/2026-06-14-location-independent-make-gates.md"
 RULE_DELETE_ERROR_PLAN = "docs/plans/2026-06-15-stream-rule-delete-error-boundary.md"
 IDEMPOTENT_RULE_SYNC_PLAN = "docs/plans/2026-06-16-idempotent-stream-rule-sync.md"
+MATCHING_RULE_CLEANUP_PLAN = "docs/plans/2026-06-17-matching-stream-rule-cleanup.md"
 PRODUCTION_LOCK_SHA256 = "27ea76d7d0f7efea504ebcee475e411502bc775dceab3e10501563085d77ce1c"
 AUDIT_LOCK_SHA256 = "fc7ce7c6f13eee2008ea150facb1560903d6d12f4d6ad5245e68fdc3a75e607b"
 REQUIRED = [
@@ -54,6 +55,7 @@ REQUIRED = [
     LOCATION_INDEPENDENT_MAKE_PLAN,
     RULE_DELETE_ERROR_PLAN,
     IDEMPOTENT_RULE_SYNC_PLAN,
+    MATCHING_RULE_CLEANUP_PLAN,
     "requirements-audit.in",
     "requirements-audit.lock",
     "requirements.txt",
@@ -186,18 +188,29 @@ def main():
         "listed_rules = stream.get_rules()",
         "if listed_rules.errors:",
         "worker_rules = [rule for rule in current if rule.tag == RULE_TAG]",
-        "if len(worker_rules) == 1 and worker_rules[0].value == rule_value:",
-        "stream.add_rules(",
-        "delete_result = stream.delete_rules(existing_ids)",
-        "if delete_result.errors:",
+        "matching_rules = [rule for rule in worker_rules if rule.value == rule_value]",
+        "if matching_rules:",
+        "retained_rule = matching_rules[0]",
+        "rule.id for rule in worker_rules if rule is not retained_rule",
+        "if redundant_ids:",
+        "delete_result = stream.delete_rules(redundant_ids)",
     ]
-    if any(marker not in sync_source for marker in sync_markers) or not all(
+    matching_branch = sync_source[
+        sync_source.find("if matching_rules:"):sync_source.find("existing_ids =")
+    ]
+    replacement_branch = sync_source[sync_source.find("existing_ids ="):]
+    if (any(marker not in sync_source for marker in sync_markers) or not all(
         sync_source.find(left) < sync_source.find(right)
         for left, right in zip(sync_markers, sync_markers[1:])
-    ):
+    ) or "stream.add_rules(" in matching_branch or
+            "delete_result = stream.delete_rules(redundant_ids)" not in matching_branch or
+            "stream.add_rules(" not in replacement_branch or
+            "delete_result = stream.delete_rules(existing_ids)" not in replacement_branch or
+            replacement_branch.find("stream.add_rules(") >=
+            replacement_branch.find("delete_result = stream.delete_rules(existing_ids)")):
         failures.append(
-            "rule synchronization must reject list errors before mutation and "
-            "delete errors before filter startup"
+            "rule synchronization must retain one matching rule without adding "
+            "and keep add-first replacement when no match exists"
         )
 
     tests = read("test_sample_stream.py")
@@ -209,7 +222,9 @@ def main():
         "test_start_stream_configures_tagged_oscars_rule",
         "test_start_stream_replaces_only_worker_tagged_rules",
         "test_start_stream_reuses_single_matching_worker_rule",
-        "test_start_stream_replaces_duplicate_matching_worker_rules",
+        "test_start_stream_reuses_one_duplicate_matching_worker_rule",
+        "test_start_stream_reuses_matching_rule_while_deleting_stale_rule",
+        "test_matching_rule_cleanup_error_aborts_without_adding_or_filtering",
         "test_rejected_replacement_rule_preserves_existing_rule",
         "test_rule_list_error_aborts_before_remote_mutation",
         "test_rule_delete_error_aborts_before_filter_start",
@@ -217,7 +232,8 @@ def main():
         "FakeStreamingClient.delete_errors",
         "self.assertEqual([\"add\", \"delete\"], stream.rule_operations)",
         "self.assertEqual([], stream.rule_operations)",
-        "self.assertEqual([\"first\", \"second\"], stream.deleted_rule_ids)",
+        "self.assertEqual([\"second\"], stream.deleted_rule_ids)",
+        "self.assertEqual([\"stale\"], stream.deleted_rule_ids)",
         "self.assertIsNone(stream.filter_options)",
         "test_rule_terms_are_literal_and_bounded",
         "test_start_stream_accepts_single_custom_track_term",
@@ -396,9 +412,13 @@ def main():
         "does not prove",
         "absolute Makefile path works from another directory",
         "single matching tagged rule",
+        "matching stream rule cleanup",
     ]:
         if phrase.lower() not in docs.lower():
             failures.append(f"docs must mention {phrase}")
+    for path in ["README.md", "SECURITY.md", "VISION.md", "CHANGES.md"]:
+        if "matching stream rule cleanup" not in read(path).lower():
+            failures.append(f"{path} must document matching stream rule cleanup")
 
     plan = read(PLAN)
     if "status: completed" not in plan or "make check" not in plan:
@@ -669,6 +689,25 @@ def main():
     ]:
         if evidence not in idempotent_rule_verification:
             failures.append(f"idempotent rule verification must record {evidence}")
+
+    matching_cleanup_plan = read(MATCHING_RULE_CLEANUP_PLAN)
+    matching_cleanup_status = re.findall(
+        r"(?mi)^status:\s*(.+?)\s*$", matching_cleanup_plan
+    )
+    matching_cleanup_verification = markdown_section(
+        matching_cleanup_plan, "Verification Completed"
+    )
+    if (matching_cleanup_status != ["completed"] or
+            "eight focused rule synchronization tests" not in matching_cleanup_verification or
+            "22 no-network tests" not in matching_cleanup_verification or
+            "All four Make gates passed" not in matching_cleanup_verification or
+            "external directory" not in matching_cleanup_verification or
+            "Six isolated hostile mutations were rejected" not in matching_cleanup_verification or
+            re.search(r"(?i)\b(?:pending|todo|tbd|not run|to complete)\b",
+                      matching_cleanup_verification)):
+        failures.append(
+            "matching stream rule cleanup plan must record completed verification"
+        )
 
     try:
         ET.parse(ROOT / "docs/readme-overview.svg")

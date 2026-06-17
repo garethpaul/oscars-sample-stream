@@ -1,6 +1,6 @@
 # Matching Stream Rule Cleanup
 
-status: planned
+status: completed
 
 ## Problem
 
@@ -68,6 +68,29 @@ guidance, and completed plan evidence against isolated hostile mutations.
 - Do not delete unrelated rules or switch the no-match replacement path to
   delete-first behavior.
 - Do not merge or close any stacked pull request.
+
+## Work Completed
+
+- Partitioned worker-tagged rules by desired value and retained the first
+  existing match during synchronization.
+- Deleted only stale or duplicate worker-tagged rule identifiers on the cleanup
+  path and returned before replacement creation.
+- Preserved add-first replacement when no desired rule exists, including the
+  existing list, add, deletion, filter-start, and unrelated-rule boundaries.
+- Added no-network regressions, static contracts, synchronized guidance, and
+  this completed evidence record.
+
+## Verification Completed
+
+- eight focused rule synchronization tests passed, including matching-plus-stale,
+  duplicate matching, cleanup deletion failure, and no-match replacement cases.
+- The complete suite passed with 22 no-network tests.
+- All four Make gates passed, and the absolute Makefile check passed from an
+  external directory.
+- Six isolated hostile mutations were rejected for matching selection, cleanup
+  targets, add fallthrough, regression registration, guidance, and plan status.
+- Python compilation, exact diff, generated-artifact, credential-signature,
+  conflict-marker, mode, binary, large-file, and whitespace audits passed.
 
 ## Risks
 

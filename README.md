@@ -87,6 +87,8 @@ python -m pip_audit --require-hashes --no-deps -r requirements.lock
   deleting, or filtering so project-wide rule state is not changed blindly.
   A single matching tagged rule is reused without add/delete calls; stale,
   missing, or duplicate tagged state still follows the convergence path.
+  Matching stream rule cleanup retains one desired rule and deletes only stale
+  or duplicate worker rules without consuming capacity for another add.
   After a replacement is added, a rejected stale-rule deletion stops startup
   before filtering so partial remote synchronization is visible to operators.
 - Custom stream filters must contain at least one non-empty string after

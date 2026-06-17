@@ -44,6 +44,8 @@ Priority:
 - Keep failed tagged-rule deletion visible before filter startup
 - Reuse a single matching tagged rule without remote mutation while converging
   stale or duplicate worker-tagged state
+- Preserve matching stream rule cleanup so an existing desired rule is retained
+  while stale and duplicate worker rules are removed without another add
 - Require expanded author identity before MongoDB storage through `insert_one`
 - Keep verification targets from leaving Python bytecode behind
 - Keep Python 3.10 and 3.12 hosted Linux validation credential-free and

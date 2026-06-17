@@ -139,17 +139,22 @@ class OscarsStream(tweepy.StreamingClient):
         tweet = payload.get("data") or {}
         if not isinstance(tweet, dict):
             return
+        tweet_id = clean_required_text(tweet.get("id"))
         text = clean_required_text(tweet.get("text"))
         author_id = clean_required_text(tweet.get("author_id"))
         username = expanded_username(payload, author_id)
-        if not text or not author_id or not username:
+        if not tweet_id or not text or not author_id or not username:
             return
 
-        self.db.tweets.insert_one({
-            "text": text,
-            "date": datetime.datetime.now(datetime.timezone.utc),
-            "screen_name": username,
-        })
+        self.db.tweets.update_one(
+            {"_id": tweet_id},
+            {"$set": {
+                "text": text,
+                "date": datetime.datetime.now(datetime.timezone.utc),
+                "screen_name": username,
+            }},
+            upsert=True,
+        )
 
     def on_request_error(self, status_code):
         if status_code in (420, 429):

@@ -108,7 +108,9 @@ python -m pip_audit --require-hashes --no-deps -r requirements.lock
   matching expanded `username` must be non-empty strings after trimming.
 - Twitter/X streaming statuses `420` and `429` disconnect the client instead
   of repeatedly reconnecting while rate limited.
-- MongoDB writes use PyMongo `insert_one`; tests preserve explicit falsy client
+- MongoDB writes use the stable tweet ID as `_id` with an idempotent PyMongo
+  upsert, so replayed deliveries replace one document instead of duplicating
+  it. Tests preserve explicit falsy client
   injection without contacting a database.
 - Local verification runs with Python bytecode writes disabled so no
   `__pycache__` output remains after the no-network gates.

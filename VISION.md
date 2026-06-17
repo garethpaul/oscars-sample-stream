@@ -46,7 +46,8 @@ Priority:
   stale or duplicate worker-tagged state
 - Preserve matching stream rule cleanup so an existing desired rule is retained
   while stale and duplicate worker rules are removed without another add
-- Require expanded author identity before MongoDB storage through `insert_one`
+- Require stable tweet identity and expanded author identity before MongoDB
+  storage, and keep replayed deliveries idempotent through an ID-keyed upsert
 - Keep verification targets from leaving Python bytecode behind
 - Keep Python 3.10 and 3.12 hosted Linux validation credential-free and
   no-network

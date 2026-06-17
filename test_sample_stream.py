@@ -66,8 +66,15 @@ class FakeTweets:
     def __init__(self):
         self.documents = []
 
-    def insert_one(self, document):
-        self.documents.append(document)
+    def update_one(self, query, update, upsert=False):
+        if not upsert:
+            raise AssertionError("tweet persistence must use an upsert")
+        fields = update["$set"]
+        for index, existing in enumerate(self.documents):
+            if all(existing.get(key) == value for key, value in query.items()):
+                self.documents[index] = {**existing, **fields}
+                return
+        self.documents.append({**query, **fields})
 
 
 class FakeMongoClient:
@@ -113,9 +120,14 @@ def load_sample_stream(overrides=None, rules=None):
     return importlib.import_module("sample_stream")
 
 
-def stream_payload(text="  hello oscars  ", author_id="42", username=" academy "):
+def stream_payload(
+    text="  hello oscars  ",
+    author_id="42",
+    username=" academy ",
+    tweet_id="100",
+):
     return json.dumps({
-        "data": {"id": "100", "text": text, "author_id": author_id},
+        "data": {"id": tweet_id, "text": text, "author_id": author_id},
         "includes": {"users": [{"id": author_id, "username": username}]},
     })
 
@@ -366,7 +378,7 @@ class SampleStreamTest(unittest.TestCase):
 
         self.assertEqual("bearer-fallback", sample_stream.config.bearer_token())
 
-    def test_stream_inserts_minimal_v2_tweet_document(self):
+    def test_stream_persists_minimal_v2_tweet_document(self):
         sample_stream = load_sample_stream()
         client = FakeMongoClient("mongodb://example.invalid/db")
         stream = sample_stream.OscarsStream("bearer", mongo_client=client)
@@ -375,6 +387,7 @@ class SampleStreamTest(unittest.TestCase):
 
         self.assertEqual(1, len(client.TweetDB.tweets.documents))
         document = client.TweetDB.tweets.documents[0]
+        self.assertEqual("100", document["_id"])
         self.assertEqual("hello oscars", document["text"])
         self.assertEqual("academy", document["screen_name"])
         self.assertIsNotNone(document["date"].tzinfo)
@@ -414,6 +427,8 @@ class SampleStreamTest(unittest.TestCase):
             stream_payload(text=123),
             stream_payload(author_id=123),
             stream_payload(username=123),
+            stream_payload(tweet_id=123),
+            stream_payload(tweet_id="   "),
             stream_payload(text="   "),
             '{"data":{"text":"missing author"},"includes":{"users":[]}}',
             '{"data":{"text":"missing user","author_id":"42"},"includes":{"users":[]}}',
@@ -424,6 +439,35 @@ class SampleStreamTest(unittest.TestCase):
             with self.subTest(payload=payload):
                 stream.on_data(payload)
         self.assertEqual([], client.TweetDB.tweets.documents)
+
+    def test_stream_replays_replace_the_same_tweet_document(self):
+        sample_stream = load_sample_stream()
+        client = FakeMongoClient("mongodb://example.invalid/db")
+        stream = sample_stream.OscarsStream("bearer", mongo_client=client)
+
+        stream.on_data(stream_payload())
+        client.TweetDB.tweets.documents[0]["moderation_state"] = "reviewed"
+        stream.on_data(stream_payload(text=" updated winner ", username=" host "))
+
+        self.assertEqual(1, len(client.TweetDB.tweets.documents))
+        document = client.TweetDB.tweets.documents[0]
+        self.assertEqual("100", document["_id"])
+        self.assertEqual("updated winner", document["text"])
+        self.assertEqual("host", document["screen_name"])
+        self.assertEqual("reviewed", document["moderation_state"])
+
+    def test_stream_persists_distinct_tweet_ids_separately(self):
+        sample_stream = load_sample_stream()
+        client = FakeMongoClient("mongodb://example.invalid/db")
+        stream = sample_stream.OscarsStream("bearer", mongo_client=client)
+
+        stream.on_data(stream_payload(tweet_id="100"))
+        stream.on_data(stream_payload(tweet_id="101", text=" second tweet "))
+
+        self.assertEqual(
+            {"100", "101"},
+            {document["_id"] for document in client.TweetDB.tweets.documents},
+        )
 
 
 if __name__ == "__main__":

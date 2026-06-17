@@ -21,6 +21,7 @@ LOCATION_INDEPENDENT_MAKE_PLAN = "docs/plans/2026-06-14-location-independent-mak
 RULE_DELETE_ERROR_PLAN = "docs/plans/2026-06-15-stream-rule-delete-error-boundary.md"
 IDEMPOTENT_RULE_SYNC_PLAN = "docs/plans/2026-06-16-idempotent-stream-rule-sync.md"
 MATCHING_RULE_CLEANUP_PLAN = "docs/plans/2026-06-17-matching-stream-rule-cleanup.md"
+IDEMPOTENT_TWEET_PERSISTENCE_PLAN = "docs/plans/2026-06-17-idempotent-tweet-persistence.md"
 PRODUCTION_LOCK_SHA256 = "27ea76d7d0f7efea504ebcee475e411502bc775dceab3e10501563085d77ce1c"
 AUDIT_LOCK_SHA256 = "fc7ce7c6f13eee2008ea150facb1560903d6d12f4d6ad5245e68fdc3a75e607b"
 REQUIRED = [
@@ -56,6 +57,7 @@ REQUIRED = [
     RULE_DELETE_ERROR_PLAN,
     IDEMPOTENT_RULE_SYNC_PLAN,
     MATCHING_RULE_CLEANUP_PLAN,
+    IDEMPOTENT_TWEET_PERSISTENCE_PLAN,
     "requirements-audit.in",
     "requirements-audit.lock",
     "requirements.txt",
@@ -152,7 +154,11 @@ def main():
         "mongo_client is not None",
         "config.mongo_url()",
         "config.bearer_token()",
-        "self.db.tweets.insert_one",
+        'tweet_id = clean_required_text(tweet.get("id"))',
+        'self.db.tweets.update_one(',
+        '{"_id": tweet_id}',
+        '{"$set": {',
+        "upsert=True",
         "if status_code in (420, 429)",
         "self.disconnect()",
         "tweepy.StreamRule(value=rule_value, tag=RULE_TAG)",
@@ -247,7 +253,7 @@ def main():
         "test_main_dry_run_emits_stable_json_for_repeated_track_terms",
         "test_main_without_dry_run_preserves_live_startup",
         "dry run must not construct a Twitter/X or MongoDB client",
-        "test_stream_inserts_minimal_v2_tweet_document",
+        "test_stream_persists_minimal_v2_tweet_document",
         "test_stream_ignores_malformed_or_incomplete_v2_payloads",
         "test_start_stream_rejects_more_than_one_hundred_track_terms",
     ]:
@@ -403,7 +409,7 @@ def main():
         "stream rate-limit",
         "hosted Linux",
         "StreamingClient",
-        "insert_one",
+        "ID-keyed upsert",
         "oscars-sample-stream",
         "dependency audit",
         "hash-locked",
@@ -419,6 +425,20 @@ def main():
     for path in ["README.md", "SECURITY.md", "VISION.md", "CHANGES.md"]:
         if "matching stream rule cleanup" not in read(path).lower():
             failures.append(f"{path} must document matching stream rule cleanup")
+        if "idempotent" not in read(path).lower():
+            failures.append(f"{path} must document idempotent tweet persistence")
+
+    tests = read("test_sample_stream.py")
+    for phrase in [
+        "def test_stream_replays_replace_the_same_tweet_document",
+        "def test_stream_persists_distinct_tweet_ids_separately",
+        "stream_payload(tweet_id=123)",
+        'self.assertEqual("100", document["_id"])',
+        'self.assertEqual("updated winner", document["text"])',
+        'self.assertEqual("reviewed", document["moderation_state"])',
+    ]:
+        if phrase not in tests:
+            failures.append(f"test_sample_stream.py must include {phrase}")
 
     plan = read(PLAN)
     if "status: completed" not in plan or "make check" not in plan:
@@ -707,6 +727,39 @@ def main():
                       matching_cleanup_verification)):
         failures.append(
             "matching stream rule cleanup plan must record completed verification"
+        )
+
+    tweet_persistence_plan = read(IDEMPOTENT_TWEET_PERSISTENCE_PLAN)
+    tweet_persistence_status = re.findall(
+        r"(?mi)^status:\s*(.+?)\s*$", tweet_persistence_plan
+    )
+    tweet_persistence_work = markdown_section(
+        tweet_persistence_plan, "Work Completed"
+    )
+    tweet_persistence_verification = markdown_section(
+        tweet_persistence_plan, "Verification Completed"
+    )
+    if tweet_persistence_status != ["completed"] or not tweet_persistence_work:
+        failures.append(
+            "idempotent tweet persistence plan must record completed work"
+        )
+    for evidence in [
+        "24 no-network tests",
+        "make check",
+        "external working directory",
+        "isolated hostile mutations",
+        "git diff --check",
+    ]:
+        if evidence not in tweet_persistence_verification:
+            failures.append(
+                f"idempotent tweet persistence verification must record {evidence}"
+            )
+    if re.search(
+        r"(?i)\b(?:pending|todo|tbd|not run|to complete)\b",
+        tweet_persistence_verification,
+    ):
+        failures.append(
+            "idempotent tweet persistence plan must record completed verification"
         )
 
     try:

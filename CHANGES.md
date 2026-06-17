@@ -2,6 +2,8 @@
 
 ## 2026-06-17
 
+- Made tweet persistence idempotent by upserting each accepted stream event
+  under its stable Twitter/X tweet ID.
 - Added matching stream rule cleanup that retains an existing desired rule while
   removing stale or duplicate worker-tagged rules without another add.
 

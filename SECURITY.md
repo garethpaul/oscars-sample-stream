@@ -73,6 +73,8 @@ A single matching tagged rule is reused without remote mutations, reducing
 avoidable API failure exposure while duplicate or stale state still converges.
 Matching stream rule cleanup retains an existing desired rule and removes only
 redundant worker-tagged rules, limiting quota use and retry amplification.
+Accepted stream events require a stable tweet ID and use idempotent, ID-keyed
+MongoDB upserts so reconnect or redelivery does not amplify stored personal data.
 Use `python sample_stream.py --dry-run` to inspect normalized rule JSON without
 reading bearer-token or MongoDB environment values, constructing clients,
 mutating persistent API v2 rules, starting a stream, or writing documents.

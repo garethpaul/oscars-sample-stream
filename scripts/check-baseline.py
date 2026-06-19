@@ -325,6 +325,13 @@ def main():
     if len(workflow_files) != 1:
         failures.append("repository must keep one canonical workflow")
 
+    agent_instructions = read("AGENTS.md")
+    for phrase in ["requirements.lock", "requirements-audit.lock", "update_one", "upsert=True"]:
+        if phrase not in agent_instructions:
+            failures.append(f"AGENTS.md must include current maintenance guidance for {phrase}")
+    if "insert_one" in agent_instructions:
+        failures.append("AGENTS.md must not preserve stale insert_one persistence guidance")
+
     requirements = read("requirements.txt")
     if requirements != "pymongo==4.17.0\ntweepy==4.16.0\n":
         failures.append("requirements.txt must keep exact maintained Tweepy and PyMongo pins")

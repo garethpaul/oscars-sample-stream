@@ -30,7 +30,7 @@ These instructions apply to the entire repository.
 - Reuse a single matching tagged rule without add/delete calls; stale or
   duplicate worker-tagged rules must still converge through replacement.
 - Require author expansion before storing a normalized username.
-- Use `insert_one` for MongoDB writes and preserve explicit falsy-client
-  injection.
+- Persist tweets with `update_one` and `upsert=True` against the tweet ID, and
+  preserve explicit falsy-client injection.
 - Disconnect on stream rate limits 420 and 429.
 - Do not commit bearer tokens, MongoDB URLs, captured posts, or local env files.

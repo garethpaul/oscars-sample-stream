@@ -25,6 +25,7 @@ IDEMPOTENT_TWEET_PERSISTENCE_PLAN = "docs/plans/2026-06-17-idempotent-tweet-pers
 PRODUCTION_LOCK_SHA256 = "27ea76d7d0f7efea504ebcee475e411502bc775dceab3e10501563085d77ce1c"
 AUDIT_LOCK_SHA256 = "fc7ce7c6f13eee2008ea150facb1560903d6d12f4d6ad5245e68fdc3a75e607b"
 REQUIRED = [
+    ".github/CODEOWNERS",
     ".github/workflows/check.yml",
     ".gitignore",
     "AGENTS.md",
@@ -299,6 +300,7 @@ def main():
             failures.append(f"Makefile must include {phrase}")
 
     workflow = read(".github/workflows/check.yml")
+    codeowners = read(".github/CODEOWNERS")
     workflow_files = [
         *sorted((ROOT / ".github/workflows").glob("*.yml")),
         *sorted((ROOT / ".github/workflows").glob("*.yaml")),
@@ -309,6 +311,7 @@ def main():
         "runs-on: ubuntu-24.04",
         "timeout-minutes: 10",
         "actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10",
+        "persist-credentials: false",
         "actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405",
         'python-version: ["3.10", "3.12"]',
         "PYTHONDONTWRITEBYTECODE: \"1\"",
@@ -324,6 +327,10 @@ def main():
         failures.append("Check workflow must disable persisted credentials for both jobs")
     if len(workflow_files) != 1:
         failures.append("repository must keep one canonical workflow")
+    if [str(path.relative_to(ROOT)) for path in workflow_files] != [".github/workflows/check.yml"]:
+        failures.append("check.yml must be the repository's only hosted workflow")
+    if codeowners.strip() != "* @garethpaul":
+        failures.append("CODEOWNERS must assign the repository to @garethpaul")
 
     agent_instructions = read("AGENTS.md")
     for phrase in ["requirements.lock", "requirements-audit.lock", "update_one", "upsert=True"]:
@@ -485,6 +492,9 @@ def main():
     if "status: completed" not in bounded_track_plan or "100-term" not in bounded_track_plan:
         failures.append("bounded track term plan must record completed status and verification")
     hosted_validation_plan = read(HOSTED_VALIDATION_PLAN)
+    prepared_ci_plan = read("docs/plans/2026-06-10-ci-baseline.md")
+    if "status: completed" not in prepared_ci_plan or "make check" not in prepared_ci_plan:
+        failures.append("CI baseline plan must record completed status and verification")
     if "status: completed" not in hosted_validation_plan or "make check" not in hosted_validation_plan:
         failures.append("hosted no-network validation plan must record completed status and verification")
     rate_limit_disconnect_plan = read(RATE_LIMIT_DISCONNECT_PLAN)

@@ -41,9 +41,9 @@ and error handling around malformed payloads. Run `make check` before changing
 credential handling or stream startup.
 Use `make lint`, `make build`, and `make verify` as the stable local aliases
 for static verification and the full no-network gate.
-Required API v2 tweet text and expanded usernames should be strings with
-meaningful content after whitespace trimming before they are written to
-MongoDB with `insert_one`.
+Required API v2 tweet IDs, tweet text, and expanded usernames should be strings
+with meaningful content after whitespace trimming before they are written to
+MongoDB with an ID-keyed upsert.
 Blank environment values should be ignored rather than treated as configured
 credentials or MongoDB URLs.
 Custom stream filters should include at least one non-empty string after
@@ -84,6 +84,7 @@ Pinned, read-only hosted Linux validation installs hash-locked Tweepy 4.16.0 and
 credentials, live Twitter calls, or MongoDB access. A separate pinned
 dependency audit uses its own hash-locked tool graph and checks the exact
 resolved `requirements.lock` graph without dependency resolution.
+Keep GitHub Actions aligned with the canonical `make check` baseline.
 
 ## Dependency and Supply Chain Security
 

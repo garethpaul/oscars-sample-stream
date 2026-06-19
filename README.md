@@ -127,6 +127,7 @@ python -m pip_audit --require-hashes --no-deps -r requirements.lock
   no-network `make check` gate on Python 3.10 and 3.12 without credentials.
 - A separate Python 3.12 job installs the hash-locked audit-tool graph and
   audits the resolved production graph without dependency resolution.
+- GitHub Actions runs that canonical baseline for pushes and pull requests.
 
 When the required SDK or runtime is unavailable, use static checks and source review first, then verify on a machine that has the matching platform toolchain.
 
@@ -175,6 +176,7 @@ When the required SDK or runtime is unavailable, use static checks and source re
   Linux no-network test contract.
 - See `docs/plans/2026-06-12-modern-stream-dependencies.md` for the API v2,
   bearer-token, tagged-rule, PyMongo, and dependency-audit migration.
+- See `docs/plans/2026-06-10-ci-baseline.md` for the original CI baseline scope.
 - See `SECURITY.md` for vulnerability reporting and safe research guidance.
 - See `VISION.md` for project direction and contribution guardrails.
 

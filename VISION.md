@@ -54,6 +54,7 @@ Priority:
 - Keep production and dependency-audit installs exact and hash-locked
 - Keep credential-free dry-run output aligned with live rule normalization and
   isolated from client construction, remote state, streaming, and storage
+- Keep GitHub Actions aligned with `make check`
 
 Next priorities:
 

@@ -1,5 +1,8 @@
+import argparse
 import datetime
 import json
+import re
+import sys
 from collections.abc import Mapping
 
 import pymongo
@@ -10,6 +13,9 @@ import config
 
 TRACK_TERMS = ["#oscars"]
 MAX_TRACK_TERMS = 100
+MAX_RULE_LENGTH = 512
+RULE_TAG = "oscars-sample-stream"
+HASHTAG = re.compile(r"^#[A-Za-z0-9_]+$")
 
 
 def clean_required_text(value):
@@ -43,64 +49,161 @@ def clean_track_terms(track_terms):
     return cleaned
 
 
-def create_api():
-    auth = tweepy.OAuthHandler(config.consumer_key, config.consumer_secret)
-    auth.set_access_token(config.access_key, config.access_secret)
-    return tweepy.API(auth)
+def stream_rule_value(track_terms):
+    terms = []
+    for term in track_terms:
+        if HASHTAG.fullmatch(term):
+            terms.append(term)
+        else:
+            escaped = term.replace("\\", "\\\\").replace('"', '\\"')
+            terms.append('"{}"'.format(escaped))
+    value = " OR ".join(terms)
+    if len(value.encode("utf-8")) > MAX_RULE_LENGTH:
+        raise ValueError("track_terms produce a stream rule larger than 512 bytes")
+    return value
 
 
-class CustomStreamListener(tweepy.StreamListener):
-    def __init__(self, api, mongo_client=None):
-        self.api = api
-        super(CustomStreamListener, self).__init__()
+def stream_plan(track_terms=None):
+    cleaned_track_terms = clean_track_terms(track_terms)
+    return {
+        "rule_tag": RULE_TAG,
+        "rule_value": stream_rule_value(cleaned_track_terms),
+        "expansions": ["author_id"],
+        "user_fields": ["username"],
+    }
+
+
+def tagged_rule_ids(rules):
+    return [rule.id for rule in rules or [] if rule.tag == RULE_TAG]
+
+
+def sync_stream_rule(stream, rule_value):
+    listed_rules = stream.get_rules()
+    if listed_rules.errors:
+        raise RuntimeError("Twitter/X could not list existing stream rules")
+    current = listed_rules.data or []
+    worker_rules = [rule for rule in current if rule.tag == RULE_TAG]
+    matching_rules = [rule for rule in worker_rules if rule.value == rule_value]
+    if matching_rules:
+        retained_rule = matching_rules[0]
+        redundant_ids = [
+            rule.id for rule in worker_rules if rule is not retained_rule
+        ]
+        if redundant_ids:
+            delete_result = stream.delete_rules(redundant_ids)
+            if delete_result.errors:
+                raise RuntimeError("Twitter/X could not delete existing stream rules")
+        return
+    existing_ids = tagged_rule_ids(worker_rules)
+    result = stream.add_rules(tweepy.StreamRule(value=rule_value, tag=RULE_TAG))
+    if result.errors or not result.data:
+        raise RuntimeError("Twitter/X rejected the replacement stream rule")
+    if existing_ids:
+        delete_result = stream.delete_rules(existing_ids)
+        if delete_result.errors:
+            raise RuntimeError("Twitter/X could not delete existing stream rules")
+
+
+def expanded_username(payload, author_id):
+    includes = payload.get("includes") or {}
+    if not isinstance(includes, dict):
+        return None
+    users = includes.get("users") or []
+    if not isinstance(users, list):
+        return None
+    for user in users:
+        if not isinstance(user, dict) or user.get("id") != author_id:
+            continue
+        return clean_required_text(user.get("username"))
+    return None
+
+
+class OscarsStream(tweepy.StreamingClient):
+    def __init__(self, bearer_token, mongo_client=None):
+        super().__init__(bearer_token, wait_on_rate_limit=False, max_retries=3)
         client = (
             mongo_client
             if mongo_client is not None
-            else pymongo.MongoClient(config.mongo_url)
+            else pymongo.MongoClient(config.mongo_url())
         )
         self.db = client.TweetDB
 
-    def on_data(self, tweet):
+    def on_data(self, raw_data):
         try:
-            data = json.loads(tweet)
+            payload = json.loads(raw_data)
         except (TypeError, ValueError):
-            return True
-        if not isinstance(data, dict):
-            return True
+            return
+        if not isinstance(payload, dict):
+            return
 
-        user = data.get("user") or {}
-        if not isinstance(user, dict):
-            return True
-        text = clean_required_text(data.get("text"))
-        screen_name = clean_required_text(user.get("screen_name"))
-        if not text or not screen_name:
-            return True
+        tweet = payload.get("data") or {}
+        if not isinstance(tweet, dict):
+            return
+        tweet_id = clean_required_text(tweet.get("id"))
+        text = clean_required_text(tweet.get("text"))
+        author_id = clean_required_text(tweet.get("author_id"))
+        username = expanded_username(payload, author_id)
+        if not tweet_id or not text or not author_id or not username:
+            return
 
-        self.db.tweets.insert({
-            "text": text,
-            "date": datetime.datetime.now(datetime.timezone.utc),
-            "screen_name": screen_name,
-        })
-        return True
+        self.db.tweets.update_one(
+            {"_id": tweet_id},
+            {"$set": {
+                "text": text,
+                "date": datetime.datetime.now(datetime.timezone.utc),
+                "screen_name": username,
+            }},
+            upsert=True,
+        )
 
-    def on_error(self, status_code):
-        return True  # Don't kill the stream
-
-    def on_timeout(self):
-        return True  # Don't kill the stream
-
-
-def create_stream(api):
-    return tweepy.streaming.Stream(api.auth, CustomStreamListener(api))
+    def on_request_error(self, status_code):
+        if status_code in (420, 429):
+            self.disconnect()
 
 
-def start_stream(track_terms=None):
-    cleaned_track_terms = clean_track_terms(track_terms)
-    api = create_api()
-    streaming_api = create_stream(api)
-    streaming_api.filter(track=cleaned_track_terms)
-    return streaming_api
+def create_stream(mongo_client=None):
+    return OscarsStream(config.bearer_token(), mongo_client=mongo_client)
+
+
+def start_stream(track_terms=None, mongo_client=None, dry_run=False):
+    plan = stream_plan(track_terms)
+    if dry_run:
+        return plan
+
+    stream = create_stream(mongo_client=mongo_client)
+    sync_stream_rule(stream, plan["rule_value"])
+    stream.filter(
+        expansions=plan["expansions"],
+        user_fields=plan["user_fields"],
+    )
+    return stream
+
+
+def main(argv=None, output=None):
+    parser = argparse.ArgumentParser(description="Run the Oscars API v2 stream worker")
+    parser.add_argument(
+        "--dry-run",
+        action="store_true",
+        help=(
+            "print the normalized stream rule without reading credentials "
+            "or creating clients"
+        ),
+    )
+    parser.add_argument(
+        "--track-term",
+        action="append",
+        dest="track_terms",
+        help="stream term to include; repeat for multiple terms",
+    )
+    args = parser.parse_args(argv)
+    result = start_stream(track_terms=args.track_terms, dry_run=args.dry_run)
+    if args.dry_run:
+        print(
+            json.dumps(result, sort_keys=True),
+            file=output if output is not None else sys.stdout,
+        )
+    return result
 
 
 if __name__ == "__main__":
-    start_stream()
+    main()

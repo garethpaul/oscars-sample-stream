@@ -28,8 +28,8 @@ Helpful reports include:
 - Review found authentication, token, or session-related code paths; changes in those areas should receive security-focused review before merge.
 - Review found file, document, data, or media parsing flows; changes in those areas should receive security-focused review before merge.
 - Dependency manifests detected: requirements.txt. Dependency updates should preserve lockfiles when present and avoid introducing packages without a clear maintenance reason.
-- Twitter credentials and MongoDB URLs must come from environment variables
-  such as `consumer_key`, `access_key`, and `MONGOHQ_URL`; do not commit local
+- Twitter/X bearer tokens and MongoDB URLs must come from environment variables
+  such as `BEARER_TOKEN` and `MONGOHQ_URL`; do not commit local
   `.env` files or captured stream payloads.
 
 ## Service and API Notes
@@ -41,8 +41,9 @@ and error handling around malformed payloads. Run `make check` before changing
 credential handling or stream startup.
 Use `make lint`, `make build`, and `make verify` as the stable local aliases
 for static verification and the full no-network gate.
-Required stream fields should be strings with meaningful content after
-whitespace trimming before they are written to MongoDB.
+Required API v2 tweet IDs, tweet text, and expanded usernames should be strings
+with meaningful content after whitespace trimming before they are written to
+MongoDB with an ID-keyed upsert.
 Blank environment values should be ignored rather than treated as configured
 credentials or MongoDB URLs.
 Custom stream filters should include at least one non-empty string after
@@ -57,10 +58,33 @@ Non-string raw stream payloads should be ignored like malformed JSON rather
 than terminating the worker.
 Explicit MongoDB client injection should be honored in no-network tests so fake
 clients cannot fall through to configured MongoDB URLs.
+Legacy stream rate-limit status `420` should disconnect instead of entering a
+reconnect loop that escalates upstream backoff.
 Python bytecode is local tooling output and should not remain after no-network
 verification gates.
-Pinned, read-only hosted Linux validation runs the fake-client baseline on two
-Python versions without credentials, live Twitter calls, or MongoDB access.
+Persistent API v2 rules are project-wide state. The worker may replace only
+rules tagged `oscars-sample-stream`; broad deletion could disrupt unrelated
+stream consumers. Rule expressions are bounded to 512 UTF-8 bytes before
+client setup. A failed existing-rule query aborts startup before add, delete,
+or filter operations rather than treating unknown project state as empty. A
+failed tagged-rule deletion stops startup before filtering rather than hiding
+partially synchronized remote rule state.
+A single matching tagged rule is reused without remote mutations, reducing
+avoidable API failure exposure while duplicate or stale state still converges.
+Matching stream rule cleanup retains an existing desired rule and removes only
+redundant worker-tagged rules, limiting quota use and retry amplification.
+Accepted stream events require a stable tweet ID and use idempotent, ID-keyed
+MongoDB upserts so reconnect or redelivery does not amplify stored personal data.
+Use `python sample_stream.py --dry-run` to inspect normalized rule JSON without
+reading bearer-token or MongoDB environment values, constructing clients,
+mutating persistent API v2 rules, starting a stream, or writing documents.
+Dry-run success is not a credentialed connectivity or authorization check.
+Pinned, read-only hosted Linux validation installs hash-locked Tweepy 4.16.0 and PyMongo
+4.17.0, then runs the fake-client baseline on two Python versions without
+credentials, live Twitter calls, or MongoDB access. A separate pinned
+dependency audit uses its own hash-locked tool graph and checks the exact
+resolved `requirements.lock` graph without dependency resolution.
+Keep GitHub Actions aligned with the canonical `make check` baseline.
 
 ## Dependency and Supply Chain Security
 

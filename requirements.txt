@@ -1,2 +1,2 @@
-pymongo==2.6.3
-tweepy==2.2
+pymongo==4.17.0
+tweepy==4.16.0

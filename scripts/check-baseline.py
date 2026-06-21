@@ -18,6 +18,7 @@ HASH_LOCK_PLAN = "docs/plans/2026-06-12-hash-locked-dependency-installs.md"
 DRY_RUN_PLAN = "docs/plans/2026-06-13-dry-run-stream-rule.md"
 RULE_LIST_ERROR_PLAN = "docs/plans/2026-06-13-stream-rule-list-error-boundary.md"
 LOCATION_INDEPENDENT_MAKE_PLAN = "docs/plans/2026-06-14-location-independent-make-gates.md"
+SAFE_MAKE_ROOT_PLAN = "docs/plans/2026-06-21-safe-make-root.md"
 RULE_DELETE_ERROR_PLAN = "docs/plans/2026-06-15-stream-rule-delete-error-boundary.md"
 IDEMPOTENT_RULE_SYNC_PLAN = "docs/plans/2026-06-16-idempotent-stream-rule-sync.md"
 MATCHING_RULE_CLEANUP_PLAN = "docs/plans/2026-06-17-matching-stream-rule-cleanup.md"
@@ -55,6 +56,7 @@ REQUIRED = [
     DRY_RUN_PLAN,
     RULE_LIST_ERROR_PLAN,
     LOCATION_INDEPENDENT_MAKE_PLAN,
+    SAFE_MAKE_ROOT_PLAN,
     RULE_DELETE_ERROR_PLAN,
     IDEMPOTENT_RULE_SYNC_PLAN,
     MATCHING_RULE_CLEANUP_PLAN,
@@ -65,6 +67,7 @@ REQUIRED = [
     "requirements.lock",
     "sample_stream.py",
     "scripts/check-baseline.py",
+    "scripts/test-makefile-root.py",
     "test_sample_stream.py",
 ]
 
@@ -289,15 +292,34 @@ def main():
     makefile = read("Makefile")
     for phrase in [
         "PYTHON ?= python3",
-        "override REPO_ROOT := $(abspath $(dir $(lastword $(MAKEFILE_LIST))))",
-        'PYTHONDONTWRITEBYTECODE=1 $(PYTHON) -m unittest discover -v -s "$(REPO_ROOT)"',
-        'PYTHONDONTWRITEBYTECODE=1 $(PYTHON) "$(REPO_ROOT)/scripts/check-baseline.py"',
+        "ifneq ($(origin MAKEFILE_LIST),file)",
+        "$(error MAKEFILE_LIST must not be overridden)",
+        "override REPO_ROOT := $(shell path=",
+        "override SHELL_REPO_ROOT :=",
+        'CDPATH= cd -- "$$directory" && /bin/pwd -P)',
+        "PYTHONDONTWRITEBYTECODE=1 $(PYTHON) -m unittest discover -v -s $(SHELL_REPO_ROOT)",
+        "PYTHONDONTWRITEBYTECODE=1 $(PYTHON) $(SHELL_REPO_ROOT)/scripts/check-baseline.py",
+        "PYTHONDONTWRITEBYTECODE=1 $(PYTHON) $(SHELL_REPO_ROOT)/scripts/test-makefile-root.py",
+        "check: test lint root-test",
         "lint: static-check",
         "build: static-check",
         "verify: check",
     ]:
         if phrase not in makefile:
             failures.append(f"Makefile must include {phrase}")
+
+    root_test = read("scripts/test-makefile-root.py")
+    for phrase in [
+        "import shlex",
+        "return result, shlex.quote(str(checkout.resolve()))",
+        "test_live_root_path_does_not_execute_shell_metacharacters",
+        "`touch BACKTICK_PWNED`",
+        '" ; touch QUOTE_PWNED ; echo "',
+        "self.assertFalse((checkout.parent / marker_name).exists(), result.stdout)",
+        'self.assertIn("live root stub passed", result.stdout)',
+    ]:
+        if phrase not in root_test:
+            failures.append(f"Make root regression must include {phrase}")
 
     workflow = read(".github/workflows/check.yml")
     codeowners = read(".github/CODEOWNERS")

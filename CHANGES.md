@@ -1,5 +1,13 @@
 # Changes
 
+## 2026-06-21
+
+- Made absolute Makefile verification safe for spaces, apostrophes, quotes,
+  backticks, and shell metacharacters,
+  ignored caller-provided `REPO_ROOT` values, and rejected command-line or
+  environment `MAKEFILE_LIST` injection before stream gates run.
+- Added live command-substitution regressions for every public Make target.
+
 ## 2026-06-17
 
 - Made tweet persistence idempotent by upserting each accepted stream event

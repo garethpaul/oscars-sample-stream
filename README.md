@@ -169,7 +169,10 @@ When the required SDK or runtime is unavailable, use static checks and source re
   changing stream startup, credential handling, MongoDB writes, or the
   `#oscars` filter.
 - Standard Make aliases resolve unittest discovery and checker paths from
-  `Makefile`, so an absolute Makefile path works from another directory.
+  `Makefile`, so an absolute Makefile path works from another directory,
+  including paths with whitespace, quotes, apostrophes, or backticks. The
+  resolved root is shell-quoted before recipe use, caller `REPO_ROOT` values
+  are ignored, and `MAKEFILE_LIST` overrides fail closed before verification.
 - See `CHANGES.md` and `docs/plans/2026-06-08-oscars-stream-baseline.md` for
   the current worker baseline.
 - See `docs/plans/2026-06-10-hosted-no-network-validation.md` for the hosted

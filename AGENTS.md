@@ -44,6 +44,8 @@ v2 stream worker for the `#oscars` sample.
 - Persist tweets with `update_one` and `upsert=True` against the tweet ID, and
   preserve explicit falsy-client injection.
 - Disconnect on stream rate limits 420 and 429.
+- Preserve Tweepy's base request-error reporting before applying local
+  disconnect decisions.
 - Do not commit bearer tokens, MongoDB URLs, captured posts, or local env files.
 
 ## PR / Change Guidance

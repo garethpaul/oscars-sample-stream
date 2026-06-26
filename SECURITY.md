@@ -60,6 +60,8 @@ Explicit MongoDB client injection should be honored in no-network tests so fake
 clients cannot fall through to configured MongoDB URLs.
 Legacy stream rate-limit status `420` should disconnect instead of entering a
 reconnect loop that escalates upstream backoff.
+HTTP request errors should still pass through Tweepy's base callback so status
+failures remain observable without logging response bodies or credentials.
 Python bytecode is local tooling output and should not remain after no-network
 verification gates.
 Persistent API v2 rules are project-wide state. The worker may replace only

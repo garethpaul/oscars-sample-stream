@@ -1,5 +1,53 @@
 # Changes
 
+## 2026-06-26 13:43:18 PDT - P1 - Preserve stream HTTP error reporting
+
+### Summary
+
+Restored Tweepy's base request-error callback so HTTP status failures remain
+observable while the worker keeps its existing 420/429 disconnect policy.
+
+### Work completed
+
+- Delegated every request error to `StreamingClient.on_request_error` before
+  applying the worker's local rate-limit decision.
+- Added a no-network regression covering retryable and rate-limit statuses.
+- Extended static contracts and operator guidance for the reporting boundary.
+
+### Threads
+
+- None; the focused callback and verification work was completed directly.
+
+### Files changed
+
+- `sample_stream.py` — preserve Tweepy's request-error reporting.
+- `test_sample_stream.py` — model and assert the base callback handoff.
+- `scripts/check-baseline.py` — enforce source, test, and plan contracts.
+- `README.md`, `SECURITY.md`, `VISION.md`, `AGENTS.md`, and
+  `docs/plans/2026-06-26-request-error-reporting.md` — document behavior and
+  verification.
+
+### Validation
+
+- Focused request-error tests — passed.
+- Full no-network, static, external-Make, mutation, and dependency checks —
+  recorded in the completed implementation plan.
+
+### Bugs / findings
+
+- P1 fixed: overriding `on_request_error` previously suppressed Tweepy's HTTP
+  status diagnostics for authorization, upstream, and rate-limit failures.
+
+### Blockers
+
+- Live Twitter/X authorization and response handling remain intentionally
+  outside the credential-free no-network test boundary.
+
+### Next action
+
+- Exercise the documented credentialed smoke path in an isolated test project
+  before production use.
+
 ## 2026-06-21
 
 - Made absolute Makefile verification safe for spaces, apostrophes, quotes,

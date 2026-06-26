@@ -23,6 +23,7 @@ RULE_DELETE_ERROR_PLAN = "docs/plans/2026-06-15-stream-rule-delete-error-boundar
 IDEMPOTENT_RULE_SYNC_PLAN = "docs/plans/2026-06-16-idempotent-stream-rule-sync.md"
 MATCHING_RULE_CLEANUP_PLAN = "docs/plans/2026-06-17-matching-stream-rule-cleanup.md"
 IDEMPOTENT_TWEET_PERSISTENCE_PLAN = "docs/plans/2026-06-17-idempotent-tweet-persistence.md"
+REQUEST_ERROR_REPORTING_PLAN = "docs/plans/2026-06-26-request-error-reporting.md"
 PRODUCTION_LOCK_SHA256 = "27ea76d7d0f7efea504ebcee475e411502bc775dceab3e10501563085d77ce1c"
 AUDIT_LOCK_SHA256 = "fc7ce7c6f13eee2008ea150facb1560903d6d12f4d6ad5245e68fdc3a75e607b"
 REQUIRED = [
@@ -61,6 +62,7 @@ REQUIRED = [
     IDEMPOTENT_RULE_SYNC_PLAN,
     MATCHING_RULE_CLEANUP_PLAN,
     IDEMPOTENT_TWEET_PERSISTENCE_PLAN,
+    REQUEST_ERROR_REPORTING_PLAN,
     "requirements-audit.in",
     "requirements-audit.lock",
     "requirements.txt",
@@ -164,6 +166,7 @@ def main():
         '{"$set": {',
         "upsert=True",
         "if status_code in (420, 429)",
+        "super().on_request_error(status_code)",
         "self.disconnect()",
         "tweepy.StreamRule(value=rule_value, tag=RULE_TAG)",
         "if listed_rules.errors:",
@@ -252,6 +255,8 @@ def main():
         "FalsyMongoClient",
         "test_stream_uses_explicit_falsy_mongo_client",
         "test_stream_disconnects_on_rate_limits_only",
+        "test_stream_reports_request_errors_through_tweepy",
+        "self.assertEqual([500, 429], stream.request_errors)",
         "test_stream_plan_matches_live_rule_and_filter_options",
         "test_dry_run_returns_default_plan_without_credentials_or_clients",
         "test_main_dry_run_emits_stable_json_for_repeated_track_terms",
@@ -799,6 +804,32 @@ def main():
     ):
         failures.append(
             "idempotent tweet persistence plan must record completed verification"
+        )
+
+    request_error_plan = read(REQUEST_ERROR_REPORTING_PLAN)
+    request_error_status = re.findall(
+        r"(?mi)^status:\s*(.+?)\s*$", request_error_plan
+    )
+    request_error_verification = markdown_section(
+        request_error_plan, "Verification Completed"
+    )
+    for evidence in [
+        "25 no-network tests",
+        "make check",
+        "external working directory",
+        "hostile rollback mutation",
+        "git diff --check",
+    ]:
+        if evidence not in request_error_verification:
+            failures.append(
+                f"request error reporting verification must record {evidence}"
+            )
+    if request_error_status != ["completed"] or re.search(
+        r"(?i)\b(?:pending|todo|tbd|not run|to complete)\b",
+        request_error_verification,
+    ):
+        failures.append(
+            "request error reporting plan must record completed verification"
         )
 
     try:

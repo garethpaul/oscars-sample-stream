@@ -157,6 +157,7 @@ class OscarsStream(tweepy.StreamingClient):
         )
 
     def on_request_error(self, status_code):
+        super().on_request_error(status_code)
         if status_code in (420, 429):
             self.disconnect()
 

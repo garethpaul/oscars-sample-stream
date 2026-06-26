@@ -107,7 +107,9 @@ python -m pip_audit --require-hashes --no-deps -r requirements.lock
 - API v2 author expansion is required before storage: tweet `text` and the
   matching expanded `username` must be non-empty strings after trimming.
 - Twitter/X streaming statuses `420` and `429` disconnect the client instead
-  of repeatedly reconnecting while rate limited.
+  of repeatedly reconnecting while rate limited. Every HTTP request error is
+  still reported through Tweepy's callback before that local disconnect
+  decision, so authorization and upstream failures remain visible.
 - MongoDB writes use the stable tweet ID as `_id` with an idempotent PyMongo
   upsert, so replayed deliveries replace one document instead of duplicating
   it. Tests preserve explicit falsy client

@@ -29,6 +29,7 @@ class FakeStreamingClient:
         self.added_rules = []
         self.filter_options = None
         self.disconnected = False
+        self.request_errors = []
         self.rules = list(self.initial_rules)
         self.rule_operations = []
         self.instances.append(self)
@@ -60,6 +61,9 @@ class FakeStreamingClient:
 
     def disconnect(self):
         self.disconnected = True
+
+    def on_request_error(self, status_code):
+        self.request_errors.append(status_code)
 
 
 class FakeTweets:
@@ -414,6 +418,17 @@ class SampleStreamTest(unittest.TestCase):
         stream.disconnected = False
         stream.on_request_error(420)
         self.assertTrue(stream.disconnected)
+
+    def test_stream_reports_request_errors_through_tweepy(self):
+        sample_stream = load_sample_stream()
+        stream = sample_stream.OscarsStream(
+            "bearer", mongo_client=FakeMongoClient("mongodb://example.invalid/db")
+        )
+
+        stream.on_request_error(500)
+        stream.on_request_error(429)
+
+        self.assertEqual([500, 429], stream.request_errors)
 
     def test_stream_ignores_malformed_or_incomplete_v2_payloads(self):
         sample_stream = load_sample_stream()

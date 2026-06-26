@@ -39,6 +39,8 @@ Priority:
 - Keep non-string raw stream payloads non-fatal
 - Keep explicit MongoDB client injection reliable for no-network tests
 - Keep API v2 stream rate-limit errors from reconnecting indefinitely
+- Keep every stream request error observable through Tweepy's status callback
+  before applying local disconnect policy
 - Keep rule replacement scoped to the `oscars-sample-stream` tag
 - Keep failed persistent-rule discovery ahead of add, delete, and filter calls
 - Keep failed tagged-rule deletion visible before filter startup

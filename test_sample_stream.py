@@ -447,7 +447,13 @@ class SampleStreamTest(unittest.TestCase):
             stream_payload(text="   "),
             '{"data":{"text":"missing author"},"includes":{"users":[]}}',
             '{"data":{"text":"missing user","author_id":"42"},"includes":{"users":[]}}',
-            '{"data":{"text":"wrong user","author_id":"42"},"includes":{"users":[{"id":"7","username":"academy"}]}}',
+            # This payload must carry an id. Without one, on_data bails at the
+            # tweet_id guard before the author-id match is ever consulted, so the
+            # case cannot discriminate: dropping `or user.get("id") != author_id`
+            # left the whole suite green while the mutant attributed author 42's
+            # tweet to user 7's username.
+            '{"data":{"id":"900","text":"wrong user","author_id":"42"},'
+            '"includes":{"users":[{"id":"7","username":"academy"}]}}',
         ]
 
         for payload in invalid_payloads:

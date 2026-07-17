@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+import importlib.util
 import os
 from pathlib import Path
 import shlex
@@ -8,6 +9,18 @@ import unittest
 
 
 ROOT = Path(__file__).resolve().parents[1]
+
+
+def load_baseline_module():
+    spec = importlib.util.spec_from_file_location(
+        "check_baseline", ROOT / "scripts" / "check-baseline.py"
+    )
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
+
+
+baseline = load_baseline_module()
 
 
 class MakefileRootTests(unittest.TestCase):
@@ -88,6 +101,77 @@ class MakefileRootTests(unittest.TestCase):
         ):
             with self.subTest(checkout_name=checkout_name):
                 self.assert_live_root_path_is_literal(checkout_name, marker_name)
+
+
+class MakefileRecipePinTests(unittest.TestCase):
+    """Planted-defect controls for the exact-recipe pin.
+
+    Each mutation is applied to real Makefile text and the pin is executed, so a
+    green result here means the pin ran and produced a verdict rather than that
+    a harness merely reported one.
+    """
+
+    def setUp(self):
+        self.makefile = (ROOT / "Makefile").read_text(encoding="utf-8")
+
+    def test_live_makefile_recipes_satisfy_the_pin(self):
+        self.assertEqual([], baseline.makefile_recipe_failures(self.makefile))
+
+    def test_pin_parses_every_expected_gate_recipe(self):
+        recipes = baseline.makefile_recipes(self.makefile)
+        for target, expected in baseline.EXPECTED_MAKEFILE_RECIPES.items():
+            self.assertEqual(expected, recipes.get(target), target)
+
+    def test_pin_rejects_exit_status_neutering_on_every_gate_recipe(self):
+        for target, expected in baseline.EXPECTED_MAKEFILE_RECIPES.items():
+            for suffix in (" || true", " ; true", " || exit 0"):
+                with self.subTest(target=target, suffix=suffix):
+                    mutated = self.makefile.replace(
+                        "\t" + expected[0] + "\n",
+                        "\t" + expected[0] + suffix + "\n",
+                        1,
+                    )
+                    self.assertNotEqual(self.makefile, mutated, "mutation must apply")
+                    failures = baseline.makefile_recipe_failures(mutated)
+                    self.assertTrue(failures, f"{target}{suffix} must be rejected")
+                    self.assertIn(f"Makefile target {target} must run exactly", failures[0])
+
+    def test_pin_rejects_silenced_and_ignored_recipe_prefixes(self):
+        expected = baseline.EXPECTED_MAKEFILE_RECIPES["test"][0]
+        for prefix in ("@echo ", "-"):
+            with self.subTest(prefix=prefix):
+                mutated = self.makefile.replace(
+                    "\t" + expected + "\n", "\t" + prefix + expected + "\n", 1
+                )
+                self.assertNotEqual(self.makefile, mutated, "mutation must apply")
+                self.assertIn(
+                    "Makefile target test must run exactly",
+                    " ".join(baseline.makefile_recipe_failures(mutated)),
+                )
+
+    def test_pin_rejects_deleted_and_relocated_gate_recipe(self):
+        expected = baseline.EXPECTED_MAKEFILE_RECIPES["static-check"][0]
+        deleted = self.makefile.replace("\t" + expected + "\n", "", 1)
+        self.assertNotEqual(self.makefile, deleted, "mutation must apply")
+        self.assertIn(
+            "Makefile target static-check must run exactly",
+            " ".join(baseline.makefile_recipe_failures(deleted)),
+        )
+        relocated = deleted + "unused-target:\n\t" + expected + "\n"
+        self.assertIn(
+            "Makefile target static-check must run exactly",
+            " ".join(baseline.makefile_recipe_failures(relocated)),
+        )
+
+    def test_workflow_keeps_direct_out_of_band_gate_steps(self):
+        workflow_lines = [
+            line.strip()
+            for line in (ROOT / ".github/workflows/check.yml")
+            .read_text(encoding="utf-8")
+            .splitlines()
+        ]
+        for step in baseline.EXPECTED_DIRECT_CI_STEPS:
+            self.assertIn(step, workflow_lines)
 
 
 if __name__ == "__main__":

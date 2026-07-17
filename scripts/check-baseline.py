@@ -24,6 +24,34 @@ IDEMPOTENT_RULE_SYNC_PLAN = "docs/plans/2026-06-16-idempotent-stream-rule-sync.m
 MATCHING_RULE_CLEANUP_PLAN = "docs/plans/2026-06-17-matching-stream-rule-cleanup.md"
 IDEMPOTENT_TWEET_PERSISTENCE_PLAN = "docs/plans/2026-06-17-idempotent-tweet-persistence.md"
 REQUEST_ERROR_REPORTING_PLAN = "docs/plans/2026-06-26-request-error-reporting.md"
+OUT_OF_BAND_GATE_PLAN = "docs/plans/2026-07-17-out-of-band-gate-observation.md"
+EXPECTED_MAKEFILE_RECIPES = {
+    "test": [
+        "PYTHONDONTWRITEBYTECODE=1 $(PYTHON) -m unittest discover -v -s $(SHELL_REPO_ROOT)"
+    ],
+    "static-check": [
+        "PYTHONDONTWRITEBYTECODE=1 $(PYTHON) $(SHELL_REPO_ROOT)/scripts/check-baseline.py"
+    ],
+    "root-test": [
+        "PYTHONDONTWRITEBYTECODE=1 $(PYTHON) $(SHELL_REPO_ROOT)/scripts/test-makefile-root.py"
+    ],
+}
+EXPECTED_MAKEFILE_GRAPH = [
+    "PYTHON ?= python3",
+    "check: test lint root-test",
+    "verify: check",
+    "build: static-check",
+    "lint: static-check",
+]
+# Steps that must observe the gates directly, out of band from make. A recipe
+# neutered with `|| true` still exits 0 through `make check`, so these steps are
+# the only channel a checker's verdict can reach CI on.
+EXPECTED_DIRECT_CI_STEPS = [
+    "- run: make check",
+    "- run: python -m unittest discover -v -s .",
+    "- run: python scripts/check-baseline.py",
+    "- run: python scripts/test-makefile-root.py",
+]
 PRODUCTION_LOCK_SHA256 = "27ea76d7d0f7efea504ebcee475e411502bc775dceab3e10501563085d77ce1c"
 AUDIT_LOCK_SHA256 = "fc7ce7c6f13eee2008ea150facb1560903d6d12f4d6ad5245e68fdc3a75e607b"
 REQUIRED = [
@@ -63,6 +91,7 @@ REQUIRED = [
     MATCHING_RULE_CLEANUP_PLAN,
     IDEMPOTENT_TWEET_PERSISTENCE_PLAN,
     REQUEST_ERROR_REPORTING_PLAN,
+    OUT_OF_BAND_GATE_PLAN,
     "requirements-audit.in",
     "requirements-audit.lock",
     "requirements.txt",
@@ -98,6 +127,40 @@ def hashed_lock_inventory(text):
             return {}
         entries[name] = (match.group(2), hashes)
     return entries
+
+
+def makefile_recipes(text):
+    """Map each Makefile target to its exact recipe lines, tab prefix removed."""
+    recipes = {}
+    current = None
+    for line in text.splitlines():
+        if line.startswith("\t"):
+            if current is not None:
+                recipes.setdefault(current, []).append(line[1:])
+            continue
+        match = re.match(r"^([A-Za-z0-9_./-]+)[ \t]*:(?!=)", line)
+        current = match.group(1) if match else None
+    return recipes
+
+
+def makefile_recipe_failures(text):
+    """Require each gate recipe to be exactly the reviewed command.
+
+    A substring pin cannot see text appended to a recipe, so `|| true`, a
+    leading `-` or `@echo`, an extra command, or a relocated recipe all keep a
+    substring pin green while destroying the exit status the gate's verdict
+    travels on. Comparing the recipe line list for equality closes that gap.
+    """
+    failures = []
+    recipes = makefile_recipes(text)
+    for target, expected in sorted(EXPECTED_MAKEFILE_RECIPES.items()):
+        found = recipes.get(target)
+        if found != expected:
+            failures.append(
+                "Makefile target {} must run exactly {} with no appended shell, "
+                "prefix, or extra command (found {})".format(target, expected, found)
+            )
+    return failures
 
 
 def main():
@@ -248,6 +311,17 @@ def main():
         "self.assertEqual([\"second\"], stream.deleted_rule_ids)",
         "self.assertEqual([\"stale\"], stream.deleted_rule_ids)",
         "self.assertIsNone(stream.filter_options)",
+        # The bound constants are pinned only as a prefix in sample_stream.py, so
+        # widening one by appending a digit keeps that pin green. These literal
+        # fixtures and message assertions are the only layer that detects such a
+        # widening, so pin the assertion bodies -- not just the test names -- to
+        # keep the boundary literal rather than expressed in terms of the
+        # constant it is meant to police.
+        'track_terms = ("term-{}".format(index) for index in range(101))',
+        'with self.assertRaisesRegex(ValueError, "more than 100"):',
+        "sample_stream.start_stream(track_terms)",
+        'with self.assertRaisesRegex(ValueError, "larger than 512 bytes"):',
+        'sample_stream.start_stream(["x" * 513])',
         "test_rule_terms_are_literal_and_bounded",
         "test_start_stream_accepts_single_custom_track_term",
         "test_start_stream_rejects_invalid_track_terms_before_client_setup",
@@ -302,16 +376,14 @@ def main():
         "override REPO_ROOT := $(shell path=",
         "override SHELL_REPO_ROOT :=",
         'CDPATH= cd -- "$$directory" && /bin/pwd -P)',
-        "PYTHONDONTWRITEBYTECODE=1 $(PYTHON) -m unittest discover -v -s $(SHELL_REPO_ROOT)",
-        "PYTHONDONTWRITEBYTECODE=1 $(PYTHON) $(SHELL_REPO_ROOT)/scripts/check-baseline.py",
-        "PYTHONDONTWRITEBYTECODE=1 $(PYTHON) $(SHELL_REPO_ROOT)/scripts/test-makefile-root.py",
-        "check: test lint root-test",
-        "lint: static-check",
-        "build: static-check",
-        "verify: check",
     ]:
         if phrase not in makefile:
             failures.append(f"Makefile must include {phrase}")
+    failures.extend(makefile_recipe_failures(makefile))
+    makefile_lines = makefile.splitlines()
+    for expected_line in EXPECTED_MAKEFILE_GRAPH:
+        if expected_line not in makefile_lines:
+            failures.append(f"Makefile must keep the exact line {expected_line}")
 
     root_test = read("scripts/test-makefile-root.py")
     for phrase in [
@@ -322,6 +394,12 @@ def main():
         '" ; touch QUOTE_PWNED ; echo "',
         "self.assertFalse((checkout.parent / marker_name).exists(), result.stdout)",
         'self.assertIn("live root stub passed", result.stdout)',
+        "def test_live_makefile_recipes_satisfy_the_pin",
+        "def test_pin_rejects_exit_status_neutering_on_every_gate_recipe",
+        "def test_pin_rejects_silenced_and_ignored_recipe_prefixes",
+        "def test_pin_rejects_deleted_and_relocated_gate_recipe",
+        "def test_workflow_keeps_direct_out_of_band_gate_steps",
+        "baseline.makefile_recipe_failures(mutated)",
     ]:
         if phrase not in root_test:
             failures.append(f"Make root regression must include {phrase}")
@@ -342,7 +420,6 @@ def main():
         "actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405",
         'python-version: ["3.10", "3.12"]',
         "PYTHONDONTWRITEBYTECODE: \"1\"",
-        "run: make check",
         "dependency-audit:",
         "python -m pip install --disable-pip-version-check --require-hashes -r requirements.lock",
         "python -m pip install --disable-pip-version-check --require-hashes -r requirements-audit.lock",
@@ -350,6 +427,13 @@ def main():
     ]:
         if expected not in workflow:
             failures.append(f"Check workflow must keep {expected}")
+    workflow_lines = [line.strip() for line in workflow.splitlines()]
+    for expected_step in EXPECTED_DIRECT_CI_STEPS:
+        if expected_step not in workflow_lines:
+            failures.append(
+                f"Check workflow must run {expected_step} as its own step so a "
+                "neutered Makefile recipe cannot swallow the verdict"
+            )
     if workflow.count("persist-credentials: false") != 2:
         failures.append("Check workflow must disable persisted credentials for both jobs")
     if len(workflow_files) != 1:

@@ -1,5 +1,49 @@
 # Changes
 
+## 2026-07-17 11:20:00 PDT - P1 - Observe the gates executing and gating
+
+### Summary
+
+Closed a verification gap in which the gates asserted that source text exists
+but nothing observed them gating. Appending ` || true` to a Makefile gate recipe
+kept every substring pin byte-identically green while holding `make check` at
+exit 0, and `make check` was CI's only observer -- so a 10x-widened validation
+bound shipped green.
+
+### Work completed
+
+- Replaced the Makefile recipe substring pins with an anchored, recipe-scoped
+  whole-line pin rejecting appended shell, ignored/silenced prefixes, extra
+  commands, deletion, and relocation.
+- Added out-of-band CI steps running the tests and both checkers directly, as
+  separate steps, so a checker's verdict reaches CI on a channel make cannot
+  swallow; pinned those steps whole-line so the layers cover each other.
+- Pinned the bound tests' literal fixtures and message assertions, matching the
+  assertion-body pinning already applied to other tests.
+- Added planted-defect controls that apply each mutation to real Makefile text,
+  execute the pin, and assert the failure message.
+
+### Threads
+
+- None; the focused gate-observation work was completed directly.
+
+### Files changed
+
+- `scripts/check-baseline.py` — whole-line recipe pins, out-of-band CI step
+  pins, and bound-test assertion pins.
+- `scripts/test-makefile-root.py` — planted-defect controls for the recipe pin.
+- `.github/workflows/check.yml` — observe the gates directly, out of band from
+  make, via external absolute-Makefile calls to the reviewed commands.
+- `docs/plans/2026-07-17-out-of-band-gate-observation.md` — record the probes,
+  both directions, and the residual limit.
+
+### Validation
+
+- `make check` green on a clean tree before and after (25 stream tests, 10 make
+  root tests).
+- Mutation evidence recorded in both directions in the plan; each mutation
+  confirmed to apply and to import/run before its result was recorded.
+
 ## 2026-06-26 13:43:18 PDT - P1 - Preserve stream HTTP error reporting
 
 ### Summary

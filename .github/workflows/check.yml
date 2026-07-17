@@ -27,6 +27,14 @@ jobs:
           python-version: ${{ matrix.python-version }}
       - run: python -m pip install --disable-pip-version-check --require-hashes -r requirements.lock
       - run: make check
+      # `make check` is not a sufficient observer on its own: a recipe neutered
+      # with `|| true` holds it at exit 0 while the checkers still print their
+      # failures. These steps run the same gates directly, so each verdict
+      # reaches CI on a channel make cannot swallow. They are separate steps so
+      # every exit status is observed independently of shell `set -e` behavior.
+      - run: python -m unittest discover -v -s .
+      - run: python scripts/check-baseline.py
+      - run: python scripts/test-makefile-root.py
   dependency-audit:
     runs-on: ubuntu-24.04
     timeout-minutes: 5
